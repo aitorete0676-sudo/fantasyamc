@@ -44,7 +44,12 @@ async function getPrices() {
   let pr = await getJ("prices");
   if (!pr) { pr = { day: G.day(Date.now()), v: {}, prev: {}, h: {}, pub: [] };
     LIGA.players.forEach(p => { const v = G.baseValue(seasonPts(p.id)); pr.v[p.id] = v; pr.prev[p.id] = v; pr.h[p.id] = [v]; });
-    await setJ("prices", pr); }
+    pr.ver = G.PRICE_VER; await setJ("prices", pr); }
+  if (pr.ver !== G.PRICE_VER) {   // cambió la fórmula de precios: se recalcula todo con la nueva y se mantiene lo que subió o bajó cada uno
+    LIGA.players.forEach(p => { const base = G.baseValue(seasonPts(p.id)), ratio = pr.h[p.id] && pr.h[p.id][0] ? (pr.v[p.id] || pr.h[p.id][0]) / pr.h[p.id][0] : 1;
+      pr.v[p.id] = Math.max(300000, Math.round(base * ratio / 10000) * 10000); pr.prev[p.id] = base; pr.h[p.id] = [base, pr.v[p.id]].filter((x, i, a) => i === 0 || x !== a[0]); });
+    pr.ver = G.PRICE_VER; await setJ("prices", pr);
+  }
   return pr;
 }
 
@@ -86,7 +91,7 @@ async function tick() {
       const J = await allJornadas(), fresh = Object.values(J).filter(j => j.n >= G.FIRST_J && j.publicada && !pr.pub.includes(j.n));
       LIGA.players.forEach(p => {
         let ch = Math.min(0.15, 0.04 * (demand[p.id] || 0)) - (unsold[p.id] ? 0.03 : 0) + (own[p.id] ? 0.005 : 0);
-        fresh.forEach(j => { const s = j.st && j.st[p.id]; if (s && s[1] > 0) ch += Math.max(-0.15, Math.min(0.25, (G.points(posOf(p.id), j, p.id) - 3) * 0.04)); else ch -= 0.02; });
+        fresh.forEach(j => { const s = j.st && j.st[p.id]; if (G.mins(j, p.id) > 0) ch += Math.max(-0.15, Math.min(0.25, (G.points(posOf(p.id), j, p.id) - 3) * 0.04)); else ch -= 0.02; });
         const v0 = pr.v[p.id] || G.baseValue(0), v = Math.max(300000, Math.round(v0 * (1 + ch) / 1000) * 1000);
         pr.prev[p.id] = v0; pr.v[p.id] = v; pr.h[p.id] = (pr.h[p.id] || []).concat(v).slice(-30);
       });
@@ -118,7 +123,7 @@ async function newTeam(name) {
   for (let tries = 0; tries < 300; tries++) {
     const squad = []; let val = 0;
     for (const [pos, n] of Object.entries(G.START_SQUAD)) {
-      const pool = LIGA.players.filter(p => posOf(p.id) === pos && !taken.has(p.id) && !squad.includes(p.id)).sort(() => Math.random() - 0.5);
+      const pool = LIGA.players.filter(p => posOf(p.id) === pos && !taken.has(p.id) && !squad.includes(p.id) && (pr.v[p.id] || 0) <= G.START_MAX).sort(() => Math.random() - 0.5);
       pool.slice(0, n).forEach(p => { squad.push(p.id); val += pr.v[p.id]; });
     }
     const err = Math.abs(val - G.START_VALUE);
