@@ -8,6 +8,9 @@
 }
 *{box-sizing:border-box}
 html,body{background:var(--bg);color:var(--fg);margin:0}
+/* iPhone (app en pantalla de inicio con barra translúcida): sin esto, en pantallas con poco contenido la barra de abajo queda flotando con un hueco debajo */
+html{min-height:calc(100% + env(safe-area-inset-top,0px))}
+body{min-height:100vh;min-height:100dvh}
 body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Helvetica Neue",Roboto,Arial,sans-serif;font-size:15px;line-height:1.35;padding-bottom:calc(80px + env(safe-area-inset-bottom,0px))}
 button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--yellow);outline-offset:1px}
