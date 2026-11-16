@@ -360,7 +360,7 @@ function lineView() {
     `<div class="row2"><select class="form" id="form" ${lk ? "disabled" : ""} aria-label="Formación">${opts}</select>
       <button class="capbtn ${S.capMode ? "on" : ""}" data-act="cap" ${lk ? "disabled" : ""}>${CROWN} ${S.capMode ? "Toca un jugador" : "Asignar capitán"}</button></div>
     <div class="note">${filled}/11 alineados${filled < 11 ? " · Con menos de 11 no puntúas." : ""} · Los números son los puntos de la J${lastJ ? lastJ.n : "-"}. Toca un jugador para cambiarlo o ver su ficha.</div>
-    <div class="pitch">${lines.slice().reverse().map(L => `<div class="line">${L.map(slot).join("")}</div>`).join("")}</div>`;
+    <div class="pitch">${lines.map(L => `<div class="line">${L.map(slot).join("")}</div>`).join("")}</div>`;
 }
 
 /* ---- tarjeta de jugador (plantilla y mercado) ---- */
