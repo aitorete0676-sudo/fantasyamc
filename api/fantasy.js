@@ -80,8 +80,8 @@ async function priceTick() {
     const [dem, uns, J] = await Promise.all([hgetall("dem"), hgetall("uns"), allJornadas()]);
     const fresh = Object.values(J).filter(j => j.n >= G.FIRST_J && j.publicada && !pr.pub.includes(j.n));
     LIGA.players.forEach(p => {
-      let ch = Math.min(0.15, 0.04 * (+dem[p.id] || 0)) - Math.min(0.09, 0.03 * (+uns[p.id] || 0));
-      fresh.forEach(j => { if (G.mins(j, p.id) > 0) ch += Math.max(-0.15, Math.min(0.25, (G.points(posOf(p.id), j, p.id) - 3) * 0.04)); else ch -= 0.02; });
+      let ch = Math.min(0.05, 0.01 * (+dem[p.id] || 0)) - Math.min(0.03, 0.01 * (+uns[p.id] || 0));
+      fresh.forEach(j => { if (G.mins(j, p.id) > 0) ch += Math.max(-0.05, Math.min(0.08, (G.points(posOf(p.id), j, p.id) - 3) * 0.01)); else ch -= 0.01; });
       const v0 = pr.v[p.id] || G.baseValue(0), v = Math.max(300000, Math.round(v0 * (1 + ch) / 1000) * 1000);
       pr.prev[p.id] = v0; pr.v[p.id] = v; pr.h[p.id] = (pr.h[p.id] || []).concat(v).slice(-30);
     });
