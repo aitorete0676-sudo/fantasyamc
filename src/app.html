@@ -443,7 +443,7 @@ function leaguesView(first) {
   const L = S.st.leagues || [], cl = L.find(l => l.code === S.st.lg);
   return (first ? `<div class="box"><h3>Entra en una liga</h3><p>Crea tu liga y pasa el código a tus amigos, o únete a la de alguien con su código. En cada liga empiezas con ${eur(GAME.START_MONEY)} € y una plantilla de unos ${eur(GAME.START_VALUE)} €.</p></div>` : "") +
     (cl ? `<div class="box"><h3>${esc(cl.name)}</h3><p>Código para invitar a tus amigos:</p><div class="row2" style="align-items:center"><span class="code">${esc(cl.code)}</span><button class="gbtn" data-share="${esc(cl.code)}">Compartir</button></div>
-      <p class="note">Cada liga tiene sus propias plantillas, mercado, precios y clasificación. Los puntos de los jugadores son los mismos en todas.</p></div>` : "") +
+      <p class="note">Cada liga tiene sus propias plantillas, mercado y clasificación. Los puntos y los precios de los jugadores son los mismos en todas.</p></div>` : "") +
     (L.length > 1 ? `<div class="box"><h3>Mis ligas</h3>${L.map(l => `<button class="lgrow ${l.code === S.st.lg ? "on" : ""}" data-lg="${esc(l.code)}"><span><b>${esc(l.name)}</b><small>${esc(l.code)}${l.admin === S.st.me ? " · la creaste tú" : ""}</small></span><span>${l.code === S.st.lg ? "Estás aquí" : "Entrar ›"}</span></button>`).join("")}</div>` : "") +
     `<div class="box"><h3>Unirse a una liga</h3><div class="row2"><input id="lgcode" class="inp" maxlength="8" placeholder="Código, p. ej. K7M2QX" autocapitalize="characters" style="flex:1;text-transform:uppercase"><button class="abtn" data-act="joinlg">Unirme</button></div></div>
     <div class="box"><h3>Crear una liga nueva</h3><div class="row2"><input id="lgnew" class="inp" maxlength="30" placeholder="Nombre, p. ej. Los de clase" style="flex:1"><button class="abtn" data-act="newlg">Crear</button></div></div>` +
@@ -455,7 +455,7 @@ function rulesView() {
   return `<div class="box"><h3>Cómo se juega</h3><p>Todos empezáis con ${eur(GAME.START_MONEY)} € y una plantilla aleatoria de ${Object.values(GAME.START_SQUAD).reduce((a, b) => a + b)} jugadores que vale unos ${eur(GAME.START_VALUE)} €. Entran los jugadores de los 16 equipos de la Tercera FFCV Grupo 2 y, dentro de cada liga, cada uno solo puede tener un dueño.</p>
     <p>Alinea 11 antes del primer partido de cada jornada. Con menos de 11 no puntúas. El capitán puntúa doble. Cada punto te da ${eur(GAME.PER_POINT)} €. Recompensa diaria: ${eur(GAME.DAILY)} €. Máximo ${GAME.MAX_SQUAD} jugadores.</p></div>
     <div class="box"><h3>Mercado</h3><ul><li>Cada día a las 00:00 salen ${GAME.MARKET_SIZE} jugadores libres de LIGA. Puedes poner los tuyos también.</li>
-    <li>Las pujas son a ciegas y duran hasta las 00:00. Gana la más alta (si empatan, la primera). La puja mínima es el precio de salida.</li>
+    <li>Las pujas son a ciegas y duran hasta las 00:00. Gana la más alta (si empatan, la primera). No se puede pujar por menos del valor del jugador.</li>
     <li>La suma de tus pujas no puede pasar de tu saldo.</li><li>Puedes vender a LIGA al momento por su valor.</li></ul></div>
     <div class="box"><h3>Puntos (según el acta)</h3><table>
     <tr><td>Minutos: 1–29' / 30–59' / 60–89' / 90'</td><td>+1 / +2 / +3 / +4</td></tr>
@@ -473,9 +473,9 @@ function rulesView() {
     <tr><td>Amarilla / doble amarilla / roja directa</td><td>−1 / −3 / −4</td></tr>
     <tr><td>Gol en propia puerta</td><td>−2</td></tr></table></div>
     <div class="box"><h3>Precios</h3><p>El precio de salida sale de los puntos de la temporada con una escala como la de LaLiga Fantasy: el mejor vale unos 100 M, uno de 60 puntos (top 10 %) unos 40 M, uno de la media unos 10 M y los que no juegan 0,5 M. La plantilla inicial no trae a nadie de más de 30 M. Después cambia cada día a las 00:00:</p><ul>
-    <li>Demanda: +4 % por cada equipo que pujó por él (tope +15 %). Si alguien lo pone a la venta y nadie puja, −3 %.</li>
-    <li>Rendimiento: el día después de publicar la jornada, (puntos − 3) × 4 %, entre −15 % y +25 %. Si no juega, −2 %.</li>
-    <li>Tener dueño: +0,5 % al día.</li></ul></div>
+    <li>Los precios son los mismos en todas las ligas.</li>
+    <li>Demanda: +4 % por cada puja que reciba en cualquier liga (tope +15 %). Si alguien lo pone a la venta y nadie puja, −3 %.</li>
+    <li>Rendimiento: el día después de publicar la jornada, (puntos − 3) × 4 %, entre −15 % y +25 %. Si no juega, −2 %.</li></ul></div>
     <div class="box"><p>Has entrado como <b>${esc(S.st.me)}</b>${S.st.admin ? " (administrador)" : ""}.</p><button class="gbtn" data-act="logout">Cerrar sesión</button></div>`;
 }
 
@@ -539,9 +539,9 @@ function renderSheet() {
     body = `<h3>Elige ${POSN[sh.pos].toLowerCase()}</h3>${opts.length ? opts.map(id => `<button class="opt" data-pick="${id}"><b>${esc(PL(id).n)}${id === cur_ ? " ✓" : ""}</b><span>${esc(team(PL(id).t).short)} · ${seasonOf(id).pf} pts</span></button>`).join("") : `<p class="note">No tienes ${POSN[sh.pos].toLowerCase()}s libres. Puja en el Mercado.</p>`}
       ${cur_ ? `<button class="opt" data-ficha="${cur_}"><b>Ver ficha de ${esc(PL(cur_).n)}</b></button><button class="opt red" data-pick=""><b>Quitar de la alineación</b></button>` : ""}`;
   } else if (sh.t === "bid") {
-    const it = S.st.market.find(i => i.pid === sh.id), my = S.st.myBids[sh.id];
-    body = it ? `<h3>Pujar por ${esc(PL(sh.id).n)}</h3><p class="note">Precio de salida ${eur(it.price)} €. Valor ${eur(val(sh.id))} €. Se resuelve a las 00:00. Saldo: ${eur(S.st.team.money)} €.</p>
-      <div class="fld"><label for="bidv">Tu puja (€)</label><input id="bidv" class="inp" type="number" inputmode="numeric" min="${it.price}" step="10000" value="${my || it.price}"></div>
+    const it = S.st.market.find(i => i.pid === sh.id), my = S.st.myBids[sh.id], mn = it ? Math.max(it.price, val(sh.id)) : 0;
+    body = it ? `<h3>Pujar por ${esc(PL(sh.id).n)}</h3><p class="note">Valor ${eur(val(sh.id))} €. Puja mínima ${eur(mn)} €: no se puede pujar por menos de su valor. Se resuelve a las 00:00. Saldo: ${eur(S.st.team.money)} €.</p>
+      <div class="fld"><label for="bidv">Tu puja (€)</label><input id="bidv" class="inp" type="number" inputmode="numeric" min="${mn}" step="10000" value="${Math.max(my || 0, mn)}"></div>
       <div class="row2"><button class="abtn" data-act="dobid">${my ? "Cambiar puja" : "Pujar"}</button>${my ? `<button class="gbtn" data-act="nobid">Retirar puja</button>` : ""}<button class="gbtn" data-ficha="${sh.id}">Ver ficha</button></div>` : "<p>Ya no está en el mercado.</p>";
   } else if (sh.t === "acts") {
     const id = sh.id, listed = S.st.market.some(i => i.pid === id && i.seller === S.st.me);
@@ -606,7 +606,8 @@ document.addEventListener("click", async e => {
       toast(a === "joinlg" ? "Ya estás dentro. Te hemos repartido tu plantilla." : "Liga creada. Pasa el código " + r.code + " a tus amigos."); await refresh(); }
     catch (e) { toast(e.message); } return; }
   if (a === "logout") { api("logout").catch(() => {}); try { localStorage.removeItem(TK); } catch (e) {} return location.reload(); }
-  if (a === "dobid") { const v = +document.getElementById("bidv").value; const id = S.sheet.id; if (await act("bid", { pid: id, amount: v }, "Puja guardada: " + eur(v) + " €")) { S.sheet = null; render(); } return; }
+  if (a === "dobid") { const v = +document.getElementById("bidv").value; const id = S.sheet.id, it = S.st.market.find(i => i.pid === id), mn = it ? Math.max(it.price, val(id)) : 0;
+    if (!(v >= mn)) return toast("No puedes pujar por menos de su valor: " + eur(mn) + " €."); if (await act("bid", { pid: id, amount: v }, "Puja guardada: " + eur(v) + " €")) { S.sheet = null; render(); } return; }
   if (a === "nobid") { const id = S.sheet.id; S.sheet = null; return act("bid", { pid: id, amount: 0 }, "Puja retirada"); }
   if (a === "sellask") { S.sheet.confirm = true; return renderSheet(); }
   if (a === "sellok") { const id = S.sheet.id; S.sheet = null; return act("sell", { pid: id }, "Vendido por " + eur(val(id)) + " €"); }
