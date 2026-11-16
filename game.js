@@ -12,7 +12,9 @@
     MAX_SQUAD: 20,
     DAILY: 100000,             // recompensa diaria
     PER_POINT: 100000,         // € por punto en la jornada
-    MARKET_SIZE: 12,           // jugadores de la liga que salen cada día al mercado
+    MARKET_SIZE: 12,
+    SHIELD_DAYS: 7,            // días de blindaje: después de llegar a un equipo no se le puede pagar la cláusula
+    CLAUSE_X: 2,               // subir la cláusula: cada € pagado la sube 2 €           // jugadores de la liga que salen cada día al mercado
     GOL: { POR: 10, DEF: 6, CEN: 5, DEL: 4 },
     CLEAN: { POR: 5, DEF: 4, CEN: 2, DEL: 1 },
     FORMS: { "4-4-2": [4, 4, 2], "4-3-3": [4, 3, 3], "3-5-2": [3, 5, 2], "3-4-3": [3, 4, 3], "4-5-1": [4, 5, 1], "5-3-2": [5, 3, 2], "5-4-1": [5, 4, 1] }

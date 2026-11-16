@@ -159,6 +159,10 @@ nav.bn svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:1.6
 .timer{display:flex;gap:8px;align-items:center;font-variant-numeric:tabular-nums}
 /* ficha */
 .fx{margin:-16px -14px 0}
+.fx .fbar{display:flex;justify-content:flex-end;padding:10px 12px;background:var(--top)}
+.favb{display:flex;align-items:center;gap:8px;border:1px solid #3a3d4a;border-radius:999px;padding:8px 14px;font-weight:600;font-size:14px}
+.favb.on{border-color:var(--yellow);color:var(--yellow)}
+.fx .r2 .ic{width:18px;height:18px;flex:none}
 .fx .fh{display:grid;grid-template-columns:116px minmax(0,1fr);background:var(--card)}
 .fx .fh .av{position:relative;background:#181a21;min-height:150px;display:grid;place-items:center;overflow:hidden}
 .fx .fh .av .shirt:not(.foto){width:80%}
@@ -438,11 +442,20 @@ function ptsView() {
 
 /* ---- Mercado ---- */
 function marketView() {
-  const pos = S.mpos, items = S.st.market.filter(i => PL(i.pid) && (pos === "ALL" || posOf(i.pid) === pos)).sort((a, b) => (a.seller === "LIGA") - (b.seller === "LIGA") || val(b.pid) - val(a.pid));
-  return rewardBox() + `<div class="chips">${[["ALL", "Todos"], ["POR", "Porteros"], ["DEF", "Defensas"], ["CEN", "Medios"], ["DEL", "Delanteros"]].map(([k, l]) => `<button data-mpos="${k}" class="${pos === k ? "on" : ""}">${l}</button>`).join("")}</div>` +
+  const pos = S.mpos, items = S.st.market.filter(i => PL(i.pid) && (pos === "ALL" || (pos === "FAV" ? isFav(i.pid) : posOf(i.pid) === pos))).sort((a, b) => (a.seller === "LIGA") - (b.seller === "LIGA") || val(b.pid) - val(a.pid));
+  return rewardBox() + `<div class="chips">${[["ALL", "Todos"], ["POR", "Porteros"], ["DEF", "Defensas"], ["CEN", "Medios"], ["DEL", "Delanteros"], ["FAV", "★ Favoritos"]].map(([k, l]) => `<button data-mpos="${k}" class="${pos === k ? "on" : ""}">${l}</button>`).join("")}</div>` +
     `<div class="note">Pujas a ciegas: nadie ve lo que pujan los demás. A las ${esc(S.st.close)} gana la puja más alta y sale mercado nuevo.</div>` +
     (items.length ? items.map(i => pcard(i.pid, "market", i)).join("") : '<div class="empty">No hay jugadores en el mercado.</div>');
 }
+// Cláusula de un jugador con dueño: { owner, c, until (fin del blindaje) }
+function clauseInfo(id) {
+  const ow = ownerOf(id), t = ow && S.st.teams[ow]; if (!t) return null;
+  const since = (t.since && t.since[id]) || t.joined || 0;
+  return { owner: ow, c: Math.max((t.cl && t.cl[id]) || 0, val(id)), until: since + GAME.SHIELD_DAYS * 86400e3 };
+}
+const isFav = id => (S.st.team.favs || []).includes(id);
+const STAR = on => `<svg viewBox="0 0 24 24" width="20" height="20" style="fill:${on ? "var(--yellow)" : "none"};stroke:${on ? "var(--yellow)" : "currentColor"};stroke-width:2;stroke-linejoin:round"><path d="M12 3.5l2.6 5.5 6 .7-4.4 4.1 1.2 5.9L12 16.8l-5.4 2.9 1.2-5.9-4.4-4.1 6-.7z"/></svg>`;
+const fmtWhen = t => new Date(t).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" });
 // Oferta de LIGA por un jugador mío que está a la venta (cambia cada día y ronda su valor)
 function offerBtn(id, confirm) {
   const it = S.st.market.find(i => i.pid === id && i.seller === S.st.me); if (!it || !it.offer) return "";
@@ -499,7 +512,7 @@ function rulesView() {
     <p>Alinea 11 antes del primer partido de cada jornada. Con menos de 11 no puntúas. El capitán puntúa doble. Cada punto te da ${eur(GAME.PER_POINT)} €. Recompensa diaria: ${eur(GAME.DAILY)} €. Máximo ${GAME.MAX_SQUAD} jugadores.</p></div>
     <div class="box"><h3>Mercado</h3><ul><li>El mercado de esta liga cierra cada día a las <b>${esc(S.st.close)}</b> (la hora a la que se creó la liga). A esa hora los fichajes pasan a sus equipos y salen ${GAME.MARKET_SIZE} jugadores libres de LIGA. Puedes poner los tuyos también.</li>
     <li>Las pujas son a ciegas y duran hasta el cierre. Gana la más alta (si empatan, la primera). No se puede pujar por menos del valor del jugador.</li>
-    <li>La suma de tus pujas no puede pasar de tu saldo.</li><li>Si pones un jugador a la venta, LIGA te hace cada día una oferta que ronda su valor (entre −7 % y +7 %). Puedes aceptarla cuando quieras. Si al cierre nadie ha pujado, sigue a la venta con una oferta nueva.</li></ul></div>
+    <li>La suma de tus pujas no puede pasar de tu saldo.</li><li>Cláusulas: cada jugador con dueño tiene una cláusula (nunca menos que su valor). Pagándola te lo llevas al momento, salvo los ${GAME.SHIELD_DAYS} primeros días después de llegar a un equipo (blindaje) o durante la jornada. Puedes subir la de los tuyos: cada € que pagas la sube ${GAME.CLAUSE_X} €.</li><li>Si pones un jugador a la venta, LIGA te hace cada día una oferta que ronda su valor (entre −7 % y +7 %). Puedes aceptarla cuando quieras. Si al cierre nadie ha pujado, sigue a la venta con una oferta nueva.</li></ul></div>
     <div class="box"><h3>Puntos (según el acta)</h3><table>
     <tr><td>Minutos: 1–29' / 30–59' / 60–89' / 90'</td><td>+1 / +2 / +3 / +4</td></tr>
     <tr><td>Titular</td><td>+1</td></tr>
@@ -558,8 +571,10 @@ function fichaView(id) {
   const strip = js.map(J => { const m = GAME.mins(J, id), pt = ptsOf(id, J);
     return `<button class="jbox ${J === sel ? "on" : ""}" data-fj="${id}:${J.n}"><small>J${J.n}</small><b>${m > 0 || pt ? pt : "–"}</b><i class="${!(m > 0) && !pt ? "x" : pt > 0 ? "p" : pt === 0 ? "y" : "n"}"></i></button>`; }).join("");
   const status = own ? (own === S.st.me ? "En tu equipo" : "De " + teamName(own)) : inMk ? "En el mercado" : "Libre (LIGA)";
+  const ci = clauseInfo(id), shield = ci && now() < ci.until;
   const btn = inMk && inMk.seller !== S.st.me ? `<button class="abtn" data-bid="${id}">${S.st.myBids[id] ? "Puja: " + eur(S.st.myBids[id]) : "Pujar"}</button>`
-    : mine ? `<button class="abtn" data-acts="${id}">Acciones</button>` : "";
+    : mine ? `<button class="abtn" data-acts="${id}">Acciones</button>`
+    : ci ? (shield ? `<button class="abtn" disabled style="opacity:.55" title="Blindado">Blindado</button>` : `<button class="abtn" data-act="clauseask" data-pid="${id}">Cláusula</button>`) : "";
   let det = "";
   if (sel) {
     const b = GAME.breakdown(posOf(id), sel, id), res = GAME.teamResult(sel, b ? b.t : p.t);
@@ -568,13 +583,17 @@ function fichaView(id) {
       ${b.rows.map(([t, q, v]) => `<tr><td>${esc(String(q))}</td><td>${esc(t)}</td><td class="${v > 0 ? "up" : v < 0 ? "dn" : "yl"}">${v}</td></tr>`).join("")}</table>
       <div class="jtotal"><span>TOTAL JORNADA ${sel.n}</span><b>${b.total}</b></div>` : '<div class="empty">No fue convocado en esta jornada.</div>');
   }
-  return `<div class="fx"><div class="fh"><div class="av">${shirt(p, 80)}${FOTOS.has(p.id) ? `<span class="tmb">${shirt({ id: "", t: p.t, d: "" }, 100)}</span>` : ""}</div>
+  const clw = S.sheet && S.sheet.clause === id && ci ? `<div class="hist">${shield ? `<p class="note" style="margin:0">Blindado hasta el ${fmtWhen(ci.until)}. Después cualquiera puede pagar su cláusula.</p>`
+      : `<p style="margin:0 0 8px">Pagas <b>${eur(ci.c)} €</b> a ${esc(teamName(ci.owner))} y ${esc(p.n)} pasa a tu equipo ahora mismo. Tu saldo: ${eur(S.st.team.money)} €.</p>
+        <div class="row2"><button class="abtn" data-act="clauseok" data-pid="${id}" ${S.st.team.money < ci.c || locked() ? "disabled" : ""}>Pagar cláusula</button><button class="gbtn" data-act="clauseno">Cancelar</button></div>
+        ${locked() ? '<p class="note">Durante la jornada no se pueden pagar cláusulas.</p>' : S.st.team.money < ci.c ? `<p class="note">Te faltan ${eur(ci.c - S.st.team.money)} €.</p>` : ""}`}</div>` : "";
+  return `<div class="fx"><div class="fbar"><button class="favb ${isFav(id) ? "on" : ""}" data-fav="${id}">${isFav(id) ? "En favoritos" : "Añadir a favoritos"} ${STAR(isFav(id))}</button></div><div class="fh"><div class="av">${shirt(p, 80)}${FOTOS.has(p.id) ? `<span class="tmb">${shirt({ id: "", t: p.t, d: "" }, 100)}</span>` : ""}</div>
       <div class="bd"><div class="r1"><span class="pos ${posOf(id)}">${posOf(id)}</span><h2>${esc(p.n)}</h2><span class="pf">PFSY<b>${se.pf}</b></span></div>
         <div class="r2"><span><span class="ck">${CHK}</span>${esc(status)}</span><span class="md">MEDIA:<b>${se.media.toFixed(1).replace(".", ",")}</b></span></div>
-        <div class="r2"><span><span class="coin">€</span>${eur(vv)}</span><span class="${dv > 0 ? "up" : dv < 0 ? "dn" : ""}" style="font-size:13px">${dv ? (dv > 0 ? "▲ +" : "▼ ") + eur(dv) : esc(team(p.t).short)}</span></div>
+        <div class="r2"><span><span class="coin">€</span>${eur(vv)}${dv ? `<small class="${dv > 0 ? "up" : "dn"}" style="font-size:12px">${dv > 0 ? "▲" : "▼"}</small>` : ""}</span><span>${ci ? `${LOCK}${eur(ci.c)}` : esc(team(p.t).short)}</span></div>
         <div class="bt"><button class="ol" data-hist="${id}">Valor histórico</button>${btn}</div></div></div>
     ${S.hist === id ? `<div class="hist"><div class="note" style="margin:0">Valor de los últimos ${h.length} días · ${esc(p.full)}</div><div class="spark">${bars}</div></div>` : ""}
-    <div class="jstrip">${strip}</div>${det}
+    ${clw}<div class="jstrip">${strip}</div>${det}
     ${S.st.admin ? `<div class="adm">Posición (admin) <select class="form" id="setpos" data-pid="${id}" aria-label="Posición">${["POR", "DEF", "CEN", "DEL"].map(x => `<option ${x === posOf(id) ? "selected" : ""}>${x}</option>`).join("")}</select></div>` : ""}</div>`;
 }
 function renderSheet() {
@@ -595,12 +614,14 @@ function renderSheet() {
     body = `<h3>${esc(PL(id).n)}</h3><button class="opt" data-ficha="${id}"><b>Ver ficha</b></button>
       ${listed ? `<button class="opt" data-unlist="${id}"><b>Quitar del mercado</b></button>` : `<button class="opt" data-act="listask"><b>Poner en el mercado</b><span>pujan los demás y LIGA te hace una oferta cada día</span></button>`}
       ${offerBtn(id, sh.confirm)}
+      ${(() => { const ci = clauseInfo(id); if (!ci) return ""; return sh.raise ? `<div class="fld"><label for="raisev">Pagas (€). La cláusula sube el doble. Ahora: ${eur(ci.c)} €</label><input id="raisev" class="inp" type="number" min="100000" step="100000" value="1000000"></div><button class="abtn" data-act="raiseok">Subir cláusula</button>`
+        : `<button class="opt" data-act="raiseask"><b>Subir cláusula</b><span>Ahora ${eur(ci.c)} € · ${now() < ci.until ? "blindado hasta el " + fmtWhen(ci.until) : "sin blindaje"}</span></button>`; })()}
       ${sh.list ? `<div class="fld"><label for="listv">Precio de salida (€, mínimo su valor)</label><input id="listv" class="inp" type="number" min="${val(id)}" step="10000" value="${val(id)}"></div><button class="abtn" data-act="listok">Poner en el mercado</button>` : ""}`;
   } else if (sh.t === "search") {
     const q = (sh.q || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
     const list = q.length < 2 ? [] : S.liga.players.filter(p => (p.full + " " + p.n + " " + team(p.t).short).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").includes(q)).slice(0, 40);
     body = `<h3>Buscar jugador</h3><div class="srch"><input id="sq" class="inp" placeholder="Nombre o equipo" value="${esc(sh.q || "")}" autocomplete="off"></div>
-      ${q.length < 2 ? '<p class="note">Escribe al menos 2 letras. Hay ' + S.liga.players.length + " jugadores de 16 equipos.</p>" : list.length ? list.map(p => `<button class="opt" data-ficha="${p.id}"><b><span class="pos ${posOf(p.id)}">${posOf(p.id)}</span> ${esc(p.n)}</b><span>${esc(team(p.t).short)} · ${eur(val(p.id))} €</span></button>`).join("") : '<p class="note">Nadie con ese nombre.</p>'}`;
+      ${q.length < 2 ? '<p class="note">Escribe al menos 2 letras. Hay ' + S.liga.players.length + " jugadores de 16 equipos.</p>" + ((S.st.team.favs || []).length ? `<h3 style="margin-top:14px">Tus favoritos</h3>` + S.st.team.favs.filter(PL).map(fid => `<button class="opt" data-ficha="${fid}"><b><span class="pos ${posOf(fid)}">${posOf(fid)}</span> ${esc(PL(fid).n)} ${STAR(true)}</b><span>${esc(team(PL(fid).t).short)} · ${eur(val(fid))} €${ownerOf(fid) ? " · " + esc(teamName(ownerOf(fid))) : ""}</span></button>`).join("") : "") : list.length ? list.map(p => `<button class="opt" data-ficha="${p.id}"><b><span class="pos ${posOf(p.id)}">${posOf(p.id)}</span> ${esc(p.n)}</b><span>${esc(team(p.t).short)} · ${eur(val(p.id))} €</span></button>`).join("") : '<p class="note">Nadie con ese nombre.</p>'}`;
   } else if (sh.t === "rival") {
     const t = S.st.teams[sh.u] || {}, sq = (t.squad || []).filter(PL);
     body = `<h3>${esc(t.name || sh.u)}</h3><p class="note">${esc(sh.u)} · ${sq.length} jugadores · ${eur(sq.reduce((s, id) => s + val(id), 0))} €</p>` +
@@ -628,6 +649,7 @@ document.addEventListener("click", async e => {
   if (d.lg) { setLg(d.lg); S.view = "team"; S.sheet = null; S.imp = null; scrollTo(0, 0); return refresh(); }
   if (d.share) { const txt = `Únete a mi liga del fantasy del Almazora C con el código ${d.share}: ${location.origin}`;
     if (navigator.share) navigator.share({ text: txt }).catch(() => {}); else navigator.clipboard.writeText(txt).then(() => toast("Código copiado"), () => toast(d.share)); return; }
+  if (d.fav) { S.sheet.keep = true; await act("fav", { pid: d.fav }, isFav(d.fav) ? "Quitado de favoritos" : "Añadido a favoritos"); if (S.sheet) { S.sheet.keep = true; renderSheet(); S.sheet.keep = false; } return; }
   if (d.hist) { S.hist = S.hist === d.hist ? null : d.hist; S.sheet.keep = true; renderSheet(); S.sheet.keep = false; return; }
   if (d.fj) { const [pid, n] = d.fj.split(":"); S.fj[pid] = +n; S.sheet.keep = true; renderSheet(); S.sheet.keep = false; return; }
   if (d.bid) { S.sheet = { t: "bid", id: d.bid }; return renderSheet(); }
@@ -659,6 +681,11 @@ document.addEventListener("click", async e => {
   if (a === "nobid") { const id = S.sheet.id; S.sheet = null; return act("bid", { pid: id, amount: 0 }, "Puja retirada"); }
   if (a === "offerask") { S.sheet.confirm = true; return renderSheet(); }
   if (a === "offerok") { const id = S.sheet.id, it = S.st.market.find(i => i.pid === id && i.seller === S.st.me); S.sheet = null; return act("acceptOffer", { pid: id }, "Vendido a LIGA por " + eur(it ? it.offer : 0) + " €"); }
+  if (a === "clauseask") { S.sheet.clause = b.dataset.pid; S.sheet.keep = true; renderSheet(); S.sheet.keep = false; return; }
+  if (a === "clauseno") { S.sheet.clause = null; S.sheet.keep = true; renderSheet(); S.sheet.keep = false; return; }
+  if (a === "clauseok") { const id = b.dataset.pid; S.sheet.clause = null; return act("payClause", { pid: id }, "¡Clausulazo! " + PL(id).n + " ya es tuyo"); }
+  if (a === "raiseask") { S.sheet.raise = true; return renderSheet(); }
+  if (a === "raiseok") { const id = S.sheet.id, v = +document.getElementById("raisev").value; S.sheet = null; return act("raiseClause", { pid: id, amount: v }, "Cláusula subida"); }
   if (a === "listask") { S.sheet.list = true; return renderSheet(); }
   if (a === "listok") { const id = S.sheet.id, v = +document.getElementById("listv").value; S.sheet = null; return act("list", { pid: id, price: v }, "En el mercado. Mira la oferta de LIGA en Acciones"); }
   if (a === "pub") { const J = S.imp; if (!J || J.err) return; b.disabled = true; if (await act("importJornada", { jornada: { n: J.n, matches: J.matches, st: J.st } }, "Puntos de la J" + J.n + " publicados")) { S.imp = null; render(); } else b.disabled = false; return; }

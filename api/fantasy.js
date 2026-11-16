@@ -118,9 +118,9 @@ async function tick(k) {
           const t = await getJ(k("team:") + b.u); if (!t || t.money < b.amount || t.squad.length >= G.MAX_SQUAD) continue;
           if (it.seller !== "LIGA") { const s = await getJ(k("team:") + it.seller);
             if (!s || !s.squad.includes(it.pid)) break;
-            s.squad = s.squad.filter(x => x !== it.pid); s.money += b.amount; dropFromLineups(s, it.pid); await setJ(k("team:") + it.seller, s); }
+            s.squad = s.squad.filter(x => x !== it.pid); s.money += b.amount; dropFromLineups(s, it.pid); lose(s, it.pid); await setJ(k("team:") + it.seller, s); }
           else if (own[it.pid]) break;
-          t.money -= b.amount; t.squad.push(it.pid); await setJ(k("team:") + b.u, t); await redis("HSET", k("owner"), it.pid, b.u); own[it.pid] = b.u;
+          t.money -= b.amount; t.squad.push(it.pid); gain(t, it.pid, Math.max(b.amount, pr.v[it.pid] || 0)); await setJ(k("team:") + b.u, t); await redis("HSET", k("owner"), it.pid, b.u); own[it.pid] = b.u;
           await log(k, "market", `${t.name || b.u} ha comprado a ${PL[it.pid].n} a ${it.seller === "LIGA" ? "LIGA" : it.seller} por ${b.amount.toLocaleString("es-ES")}€` + (list.length > 1 ? ` (${list.length} pujas)` : ""));
           done = true; break;
         }
@@ -139,6 +139,10 @@ async function tick(k) {
 }
 // Oferta diaria de LIGA por un jugador puesto a la venta: ronda su valor (entre −7 % y +7 %)
 const ligaOffer = v => Math.max(300000, Math.round(v * (0.93 + Math.random() * 0.14) / 10000) * 10000);
+// Cláusula: nunca por debajo del valor. "since" = cuándo llegó al equipo (blindaje de SHIELD_DAYS días)
+const clauseOf = (t, pid, pr) => Math.max((t.cl && t.cl[pid]) || 0, pr.v[pid] || 0);
+function gain(t, pid, amount) { t.cl = t.cl || {}; t.since = t.since || {}; t.cl[pid] = Math.max(amount, 0); t.since[pid] = Date.now(); }
+function lose(t, pid) { if (t.cl) delete t.cl[pid]; if (t.since) delete t.since[pid]; }
 function dropFromLineups(t, pid) { Object.values(t.lineups || {}).forEach(l => { l.s = (l.s || []).map(x => x === pid ? null : x); if (l.c === pid) l.c = null; }); }
 
 /* ---------- jornada en juego y cierre de alineaciones ---------- */
@@ -164,7 +168,8 @@ async function newTeam(k, name) {
     if (err < 3e6) break;
   }
   for (const id of best.squad) await redis("HSET", k("owner"), id, name);
-  return { name: "", money: G.START_MONEY, squad: best.squad, lineups: {}, daily: "", joined: Date.now(), v3: 1 };
+  const t = { name: "", money: G.START_MONEY, squad: best.squad, lineups: {}, daily: "", joined: Date.now(), v3: 1 };
+  best.squad.forEach(id => gain(t, id, pr.v[id] || 0)); return t;
 }
 
 module.exports = async (req, res) => {
@@ -236,7 +241,7 @@ module.exports = async (req, res) => {
         if (Math.abs(val - G.START_VALUE) > 10e6) {
           for (const id of mine.squad) await redis("HDEL", k("owner"), id);
           const mk = await getJ(k("market")); if (mk) { mk.items = mk.items.filter(i => i.seller !== me.name); await setJ(k("market"), mk); }
-          const t = await newTeam(k, me.name); mine.squad = t.squad; mine.lineups = {};
+          const t = await newTeam(k, me.name); mine.squad = t.squad; mine.lineups = {}; mine.cl = t.cl; mine.since = t.since;
           await log(k, "info", `A ${mine.name || me.name} se le ha cambiado la plantilla para que ronde los 100 M con los precios nuevos (antes valía ${Math.round(val / 1e6)} M).`);
         }
         mine.v3 = 1; await setJ(myKey, mine);
@@ -248,11 +253,37 @@ module.exports = async (req, res) => {
       const owner = {}; for (let i = 0; i < (ownerArr || []).length; i += 2) owner[ownerArr[i]] = ownerArr[i + 1];
       const teams = {};
       for (const u of users) { const t = u === me.name ? mine : await getJ(k("team:") + u); if (!t) continue;
-        teams[u] = { name: t.name, squad: t.squad, lineups: t.lineups }; }   // el dinero de los demás no se enseña
+        teams[u] = { name: t.name, squad: t.squad, lineups: t.lineups, cl: Object.fromEntries(t.squad.map(id => [id, clauseOf(t, id, pr)])), since: t.since || {}, joined: t.joined || 0 }; }   // el dinero de los demás no se enseña
       const myBids = {}; for (const it of (market ? market.items : [])) { const v = await redis("HGET", k("bids:") + it.pid, me.name); if (v) myBids[it.pid] = JSON.parse(v).amount; }
       const imported = {}; Object.values(J).filter(j => j.n >= G.FIRST_J).forEach(j => imported[j.n] = j);
       return send(200, { me: me.name, admin, now: Date.now(), leagues: lgList, lg, close: k.hm, team: mine, teams, owner, prices: { v: pr.v, prev: pr.prev, h: pr.h }, market: market ? market.items : [],
         myBids, points, log: (logs || []).map(x => JSON.parse(x)), jornadas: imported, current: { ...cur, locked: !!locked }, pos: POSO });
+    }
+    if (a === "fav") {   // favoritos (en cada liga los suyos)
+      if (!PL[b.pid]) return send(400, { error: "Jugador desconocido." });
+      const f = new Set(mine.favs || []); f.has(b.pid) ? f.delete(b.pid) : f.add(b.pid); mine.favs = [...f].slice(-100); await setJ(myKey, mine); return send(200, { ok: true });
+    }
+    if (a === "raiseClause") {   // pagas X y la cláusula sube 2X
+      if (!mine.squad.includes(b.pid)) return send(400, { error: "Ese jugador no es tuyo." });
+      const x = Math.round(+b.amount || 0); if (!(x >= 100000)) return send(400, { error: "Sube al menos 100.000 €." });
+      if (x > mine.money) return send(400, { error: "No tienes tanto saldo." });
+      const pr = await getPrices(), c = clauseOf(mine, b.pid, pr); mine.money -= x; mine.cl = mine.cl || {}; mine.cl[b.pid] = c + G.CLAUSE_X * x; await setJ(myKey, mine);
+      await log(k, "market", `${mine.name || me.name} ha subido la cláusula de ${PL[b.pid].n} a ${mine.cl[b.pid].toLocaleString("es-ES")}€`);
+      return send(200, { ok: true, clause: mine.cl[b.pid] });
+    }
+    if (a === "payClause") {   // clausulazo: se paga la cláusula al dueño y el jugador pasa a tu equipo al momento
+      const ow = await redis("HGET", k("owner"), b.pid); if (!ow || ow === me.name) return send(400, { error: "Ese jugador no tiene dueño rival." });
+      if (locked) return send(400, { error: "Durante la jornada no se pueden pagar cláusulas." });
+      const t = await getJ(k("team:") + ow); if (!t || !t.squad.includes(b.pid)) return send(400, { error: "Ese jugador ya no está en ese equipo." });
+      const since = (t.since && t.since[b.pid]) || t.joined || 0, until = since + G.SHIELD_DAYS * 86400e3;
+      if (Date.now() < until) return send(400, { error: "Está blindado hasta el " + new Date(until).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" }) + "." });
+      if (mine.squad.length >= G.MAX_SQUAD) return send(400, { error: "Tienes el máximo de " + G.MAX_SQUAD + " jugadores." });
+      const pr = await getPrices(), c = clauseOf(t, b.pid, pr); if (mine.money < c) return send(400, { error: "Te faltan " + (c - mine.money).toLocaleString("es-ES") + " € para la cláusula." });
+      t.squad = t.squad.filter(x => x !== b.pid); t.money += c; dropFromLineups(t, b.pid); lose(t, b.pid); await setJ(k("team:") + ow, t);
+      mine.money -= c; mine.squad.push(b.pid); gain(mine, b.pid, c); await setJ(myKey, mine); await redis("HSET", k("owner"), b.pid, me.name);
+      const mk = await getJ(k("market")); if (mk && mk.items.some(i => i.pid === b.pid)) { mk.items = mk.items.filter(i => i.pid !== b.pid); await setJ(k("market"), mk); await redis("DEL", k("bids:") + b.pid); }
+      await log(k, "market", `¡Clausulazo! ${mine.name || me.name} ha pagado la cláusula de ${PL[b.pid].n} a ${t.name || ow}: ${c.toLocaleString("es-ES")}€`);
+      return send(200, { ok: true, amount: c });
     }
     if (a === "teamName") { mine.name = String(b.name || "").trim().slice(0, 28); await setJ(myKey, mine); return send(200, { ok: true }); }
     if (a === "daily") {
@@ -289,7 +320,7 @@ module.exports = async (req, res) => {
         if (!it || !it.offer) return send(400, { error: "No tienes ninguna oferta de LIGA por este jugador." });
         if (inL) return send(400, { error: "Está en tu alineación de una jornada en juego." });
         market.items = market.items.filter(i => i !== it); await setJ(k("market"), market); await redis("DEL", k("bids:") + b.pid);
-        mine.squad = mine.squad.filter(x => x !== b.pid); mine.money += it.offer; dropFromLineups(mine, b.pid); await setJ(myKey, mine); await redis("HDEL", k("owner"), b.pid);
+        mine.squad = mine.squad.filter(x => x !== b.pid); mine.money += it.offer; dropFromLineups(mine, b.pid); lose(mine, b.pid); await setJ(myKey, mine); await redis("HDEL", k("owner"), b.pid);
         await log(k, "market", `${mine.name || me.name} ha vendido a ${PL[b.pid].n} a LIGA por ${it.offer.toLocaleString("es-ES")}€`);
         return send(200, { ok: true, amount: it.offer });
       } else if (a === "list") {
