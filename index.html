@@ -1,0 +1,749 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#1a1b22">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AMC Fantasy">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<script src="/config.js"></script>
+</head>
+<body>
+<title>Almazora C Fantasy</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+:root{
+  --bg:#0b0c10; --top:#1a1b22; --card:#23252e; --card2:#2c2f3a; --line:#343743;
+  --fg:#f4f5f7; --muted:#a2a6b3; --accent:#ee5a4b; --yellow:#f5d547; --ok:#3fbf6b; --bad:#ee5a4b;
+  --por:#d9a400; --def:#9b3fd6; --cen:#2b8fe0; --del:#f0a020;
+  color-scheme:dark;
+}
+:root[data-theme="light"]{color-scheme:dark}
+*{box-sizing:border-box}
+html,body{background:var(--bg);color:var(--fg);margin:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Helvetica Neue",Roboto,Arial,sans-serif;font-size:15px;line-height:1.35;padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--yellow);outline-offset:1px}
+.app{max-width:640px;margin:0 auto}
+header{position:sticky;top:0;z-index:20;background:var(--top);padding-top:env(safe-area-inset-top,0px)}
+.hd{display:grid;grid-template-columns:48px 1fr 48px;align-items:center;padding:8px 12px;min-height:60px}
+.logo{text-align:center;font-weight:800;font-size:20px;letter-spacing:-.2px}
+.logo span{color:var(--accent);font-weight:700}
+.rbtn{width:42px;height:42px;border-radius:50%;background:#14151b;border:1px solid var(--line);display:grid;place-items:center}
+.rbtn svg{width:20px;height:20px;stroke:var(--fg);fill:none;stroke-width:2;stroke-linecap:round}
+.subt{display:grid;grid-auto-flow:column;grid-auto-columns:1fr}
+.subt button{padding:12px 4px;color:var(--muted);font-size:16px;border-bottom:3px solid transparent}
+.subt button.on{color:var(--fg);border-bottom-color:var(--accent)}
+.subt.single{border-bottom:3px solid var(--accent)}
+.info{display:grid;grid-template-columns:auto 1fr auto;gap:10px;padding:10px 16px 14px;background:var(--bg)}
+.info small{display:block;font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.02em}
+.info b{font-size:19px;font-variant-numeric:tabular-nums}
+.info .c{text-align:center}.info .r{text-align:right}
+.coin{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--yellow);color:#14151b;font-size:12px;font-weight:800;vertical-align:-3px;flex:none}
+.coin.g{background:#5d6170;color:#fff}
+main{padding:0 12px 16px}
+.reward{border:1px solid var(--line);background:#14151b;padding:14px;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;margin:4px 0 14px}
+.reward p{grid-column:1/-1;margin:0;font-size:17px}
+.reward .amt{display:flex;gap:8px;align-items:center}
+.ybtn{background:var(--yellow);color:#14151b;font-weight:700;padding:10px 14px;font-size:15px}
+.abtn{background:var(--accent);color:#fff;font-weight:700;padding:9px 16px;font-size:16px}
+.abtn[disabled],.ybtn[disabled]{opacity:.45;cursor:not-allowed}
+.gbtn{background:var(--card2);padding:9px 12px;font-weight:600}
+.row2{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+select.form{background:var(--card);color:var(--fg);border:0;padding:10px 12px;font:inherit;font-weight:700;font-size:17px}
+.capbtn{background:var(--card);padding:10px 14px;font-weight:600;display:flex;gap:8px;align-items:center}
+.capbtn.on{background:var(--yellow);color:#14151b}
+.crown{width:20px;height:16px;fill:#a46bff}
+.capbtn.on .crown{fill:#14151b}
+.pitch{position:relative;border:2px solid #2a2c35;border-radius:2px;padding:14px 6px 18px;display:grid;gap:14px;background:linear-gradient(180deg,#101116,#0c0d11)}
+.pitch::before{content:"";position:absolute;left:22%;right:22%;top:-2px;height:17%;border:2px solid #2a2c35;border-top:0}
+.pitch::after{content:"";position:absolute;left:50%;bottom:-2px;width:34%;aspect-ratio:2/1;transform:translateX(-50%);border:2px solid #2a2c35;border-bottom:0;border-radius:999px 999px 0 0}
+.line{display:flex;justify-content:center;gap:6px;position:relative;z-index:1}
+.slot{width:min(19vw,104px);position:relative;background:#1d1f27;display:flex;flex-direction:column;align-items:stretch;min-height:0}
+.slot .face{aspect-ratio:1/1;display:grid;place-items:center;background:linear-gradient(180deg,#2d303b,#1e2029);position:relative;overflow:hidden}
+.slot .face svg{width:78%;height:auto;fill:#3c404d}
+.slot.full .face svg{fill:#6d7386}
+.slot .num{position:absolute;top:3px;left:5px;font-weight:800;font-size:13px;color:#cfd3dc}
+.slot .nm{background:#f4f5f7;color:#14151b;font-size:13px;padding:3px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;min-height:22px}
+.slot.empty .nm{background:#2a2c35;color:var(--muted);text-align:center}
+.slot .badge{position:absolute;right:-5px;bottom:14px;min-width:24px;height:24px;border-radius:12px;background:var(--ok);color:#fff;display:grid;place-items:center;font-weight:800;font-size:12px;padding:0 5px;box-shadow:0 0 0 2px var(--bg)}
+.slot .badge.neg{background:var(--bad)}
+.slot .cap{position:absolute;top:2px;right:3px}
+.slot .cap svg{width:18px;height:14px;fill:var(--yellow)}
+.pos{display:inline-block;font-size:12px;font-weight:800;padding:3px 6px;color:#fff;letter-spacing:.02em}
+.pos.POR{background:var(--por)} .pos.DEF{background:var(--def)} .pos.CEN{background:var(--cen)} .pos.DEL{background:var(--del)}
+.lockmsg{background:#3a2420;color:#ffb3a9;padding:10px 12px;margin-bottom:12px;font-size:14px}
+.pcard{display:grid;grid-template-columns:92px minmax(0,1fr);background:var(--card);margin-bottom:12px}
+.pcard .ph{background:#181a21;display:grid;place-items:center;position:relative}
+.pcard .ph svg{width:80%;fill:#555a68}
+.pcard .ph .num{position:absolute;top:6px;left:8px;font-weight:800;color:#cfd3dc}
+.pcard .ph .inxi{position:absolute;top:6px;right:6px;width:20px;height:20px;border-radius:50%;background:var(--ok);display:grid;place-items:center}
+.pcard .ph .inxi svg{width:12px;fill:none;stroke:#fff;stroke-width:3}
+.pcard .bd{padding:10px 12px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 8px;align-items:center}
+.pcard .tt{display:flex;gap:8px;align-items:center;min-width:0}
+.pcard .tt b{font-size:19px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pcard .big{text-align:right;color:var(--muted);font-weight:700;font-size:13px;white-space:nowrap}
+.pcard .big b{color:var(--fg);font-size:26px;margin-left:4px}
+.pcard .ln{display:flex;gap:8px;align-items:center;font-size:14px;min-width:0}
+.pcard .rt{text-align:right;font-size:14px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.pcard .rt b{color:var(--fg);margin-left:6px}
+.ck{width:20px;height:20px;border-radius:50%;background:var(--ok);display:grid;place-items:center;flex:none}
+.ck svg{width:12px;fill:none;stroke:#fff;stroke-width:3}
+.ck.no{background:#5d6170}
+.boxes{display:flex;gap:3px}
+.boxes i{font-style:normal;width:26px;height:26px;background:#3a3d49;display:grid;place-items:center;font-weight:700;font-size:13px;border-bottom:3px solid #5d6170}
+.boxes i.p{border-bottom-color:var(--ok)} .boxes i.z{border-bottom-color:#e0a030} .boxes i.n{border-bottom-color:var(--bad)} .boxes i.x{color:var(--muted)}
+.up{color:var(--ok)} .dn{color:var(--bad)}
+.trend{font-size:12px;font-weight:700}
+.mkbar{position:fixed;left:0;right:0;bottom:calc(64px + env(safe-area-inset-bottom,0px));z-index:15;background:var(--accent);color:#14151b}
+.mkbar div{max-width:640px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;padding:12px 16px;font-weight:800}
+.mkbar b{font-size:19px;font-variant-numeric:tabular-nums}
+.mkpad{height:56px}
+nav.bn{position:fixed;left:0;right:0;bottom:0;z-index:25;background:var(--bg);border-top:1px solid #1d1f27;padding-bottom:env(safe-area-inset-bottom,0px)}
+nav.bn .in{max-width:640px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);padding:6px 6px 4px}
+nav.bn button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 2px;font-size:12.5px;color:#d5d8e0;border-radius:28px}
+nav.bn button.on{color:var(--accent);background:#23252e}
+nav.bn svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round}
+.act{background:var(--card);padding:14px 16px;margin-bottom:6px}
+.act .h{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.act .h b{font-size:20px}
+.act .h span{color:var(--muted);font-size:14px;white-space:nowrap}
+.act p{margin:8px 0 0;font-size:16px}
+.empty{color:var(--muted);text-align:center;padding:30px 10px}
+.tbl{background:var(--card)}
+.tr{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:10px;align-items:center;padding:12px 14px;border-top:1px solid var(--line)}
+.tr:first-child{border-top:0}
+.tr .n{font-weight:800;font-size:18px;color:var(--muted);text-align:center}
+.tr.me{box-shadow:inset 3px 0 0 var(--accent)}
+.tr .t b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tr .t small{color:var(--muted)}
+.tr .p{text-align:right;font-weight:800;font-size:20px;font-variant-numeric:tabular-nums}
+.tr .p small{display:block;font-size:12px;color:var(--muted);font-weight:600}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:4px 0 12px;scrollbar-width:none}
+.chips button{background:var(--card);padding:7px 13px;border-radius:16px;font-weight:600;font-size:14px;white-space:nowrap}
+.chips button.on{background:var(--accent);color:#fff}
+.sheet{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center}
+.sheet .in{background:var(--top);width:100%;max-width:640px;max-height:80vh;overflow:auto;padding:16px 14px calc(16px + env(safe-area-inset-bottom,0px))}
+.sheet h3{margin:0 0 10px;font-size:18px}
+.opt{display:flex;width:100%;justify-content:space-between;align-items:center;gap:10px;padding:12px;background:var(--card);margin-bottom:6px;text-align:left}
+.opt span{color:var(--muted);font-size:14px;white-space:nowrap}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(140px + env(safe-area-inset-bottom,0px));background:var(--yellow);color:#14151b;font-weight:700;padding:10px 16px;z-index:60;max-width:calc(100% - 32px)}
+.box{background:var(--card);padding:14px;margin-bottom:12px}
+.box h3{margin:0 0 8px;font-size:18px}
+.box p,.box li{color:#d5d8e0}
+.box table{width:100%;border-collapse:collapse;font-size:14px}
+.box td,.box th{padding:6px 4px;border-top:1px solid var(--line);text-align:left}
+.box td:last-child,.box th:last-child{text-align:right}
+.fld{display:grid;gap:4px;margin-bottom:10px}
+.fld label{font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase}
+.fld input,.fld select,.acta input,.acta select{background:#14151b;color:var(--fg);border:1px solid var(--line);padding:9px;font:inherit;min-width:0;width:100%}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.acta{display:grid;grid-template-columns:minmax(0,1fr) 62px 46px 52px 44px;gap:5px;align-items:center;font-size:14px}
+.acta .h{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase}
+.acta .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acta input,.acta select{padding:6px 4px;text-align:center}
+.spark{display:flex;gap:2px;align-items:flex-end;height:26px}
+.spark i{width:6px;background:#5d6170;display:block}
+.spark i.u{background:var(--ok)} .spark i.d{background:var(--bad)}
+.note{font-size:13px;color:var(--muted);margin:6px 2px 12px}
+.mode{font-size:12px;color:var(--muted);text-align:center;padding:4px 12px 0}
+</style>
+
+<div class="app">
+<header>
+  <div class="hd">
+    <button class="rbtn" data-go="more" aria-label="Menú"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+    <div class="logo">ALMAZORA C <span>fantasy</span></div>
+    <span></span>
+  </div>
+  <div id="subt"></div>
+</header>
+<div id="info"></div>
+<main id="main"><div class="empty">Cargando…</div></main>
+</div>
+<div id="mkbar"></div>
+<div id="sheet"></div>
+<div class="toast" id="toast" hidden></div>
+<nav class="bn"><div class="in">
+  <button data-go="table"><svg viewBox="0 0 32 32"><path d="M5 27V15h7v12M12 27V7h8v20M20 27V12h7v15M3 27h26"/></svg>Clasificación</button>
+  <button data-go="team"><svg viewBox="0 0 32 32"><rect x="4" y="6" width="24" height="20"/><path d="M16 6v20M4 11h4v10H4M28 11h-4v10h4"/><circle cx="16" cy="16" r="3"/></svg>Equipo</button>
+  <button data-go="market"><svg viewBox="0 0 32 32"><path d="M6 12V7h20v5M6 26h20V12H6zM10 22l5-5 3 3 5-6M20 14h3v3"/></svg>Mercado</button>
+  <button data-go="activity"><svg viewBox="0 0 32 32"><rect x="8" y="6" width="16" height="22" rx="2"/><path d="M12 4h8v4h-8zM12 14h8M12 18h8M12 22h8"/></svg>Actividad</button>
+  <button data-go="more"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="11"/><path d="M13 13a3 3 0 1 1 4 3c-1 .5-1 1-1 2.5M16 22v.5"/></svg>Más</button>
+</div></nav>
+
+<script>
+/* =====================================================================
+   ALMAZORA C FANTASY · Tercera FFCV Grupo 2
+   Plantilla y estadísticas J1–J8 (convocado, jugados, titular, goles, tarjetas).
+   Posiciones: POR portero, DEF defensa, CEN centrocampista, DEL delantero.
+   ===================================================================== */
+const EQUIPO = "C.D. Almazora 'C'";
+const PLANTILLA = [
+  // id federativo, dorsal, nombre, posición, nombre en el acta
+  ["9860107", 1, "Marc Conde", "POR", "Marc Conde Martí"],
+  ["9820206", 2, "Daniel Muñoz", "DEF", "Daniel Muñoz Trujillo"],
+  ["9804236", 3, "Asier Alvarado", "DEF", "Asier Alvarado Bartoll"],
+  ["9804323", 3, "Unai Arnau", "DEF", "Unai Arnau Moreno"],
+  ["9765719", 4, "Ariel Cabanes", "DEF", "Ariel Cabanes Claramonte"],
+  ["9847079", 5, "César Blacio", "DEF", "Cesar Luis Blacio Castro"],
+  ["9834131", 7, "Alejandro Grigore", "DEL", "Alejandro Grigore"],
+  ["22222328", 8, "Víctor de la Torre", "CEN", "Victor De La Torre Abril"],
+  ["9796573", 9, "Carlos Moliner", "DEL", "Carlos Moliner Cano"],
+  ["9765310", 9, "Ramón Herrando", "CEN", "Ramon Herrando Borillo"],
+  ["9770969", 10, "Aitor Jiménez", "CEN", "Aitor Jimenez Villena"],
+  ["9865452", 11, "Arnau Badal", "CEN", "Arnau Badal Prades"],
+  ["9766416", 12, "Sergi Catalá", "DEF", "Sergi Catala Mezquita"],
+  ["9820536", 13, "Manel Llop", "POR", "Manel Llop Herrando"],
+  ["101901", 14, "Ramón Tercero", "DEL", "Ramón Tercero Vazquez"],
+  ["9805363", 16, "Álex Fernández", "CEN", "Alex Fernandez Fabregat"],
+  ["93225", 17, "Alejandro Martínez", "DEF", "Alejandro Martinez Ventura"],
+  ["9789996", 20, "Marc Escobar", "CEN", "Marc Escobar Agost"],
+  ["906661036", 21, "Adriano", "CEN", "Giuseppe Di Benedetto"],
+  ["9783331", 21, "Iker Mediavilla", "DEF", "Iker Mediavilla Ferrer"],
+  ["9810030", 22, "Juan Devesa", "CEN", "Juan Devesa Cervera"],
+  ["27459988", 23, "Gennie", "CEN", "Gennie Alberto Moreno Collazos"],
+  ["38058", 25, "Chechu", "DEF", "Sergio Domenech Esteve"],
+  ["907370605", 27, "Tomás Balagué", "DEF", "Tomas Balague Garcia"]
+];
+// Jornadas 1-8 sacadas de las actas: m minutos, g goles, y amarillas (2 = doble), r roja, pp gol en propia
+const ACTAS = {
+  1: {"n":1,"rival":"C.D. San Lorenzo de Castellón","local":true,"gf":0,"gc":5,"inicio":"2026-09-19T18:45","st":{"9860107":{"m":90},"9820206":{"m":90},"9765719":{"m":90},"22222328":{"m":90},"9765310":{"m":57},"9766416":{"m":57},"9865452":{"m":57},"9789996":{"m":90,"y":1},"906661036":{"m":90},"9810030":{"m":57},"9834131":{"m":90,"y":1},"9847079":{"m":33},"9770969":{"m":27,"y":2},"9805363":{"m":33},"93225":{"m":33}},"jugada":true},
+  2: {"n":2,"rival":"C.D. Castellón S.A.D. 'C'","local":false,"gf":1,"gc":5,"inicio":"2026-09-26T19:10","st":{"9820536":{"m":90},"9820206":{"m":90},"38058":{"m":90},"9765719":{"m":90,"pp":1},"9765310":{"m":63,"g":1,"y":1},"9796573":{"m":90},"9766416":{"m":90},"9865452":{"m":90,"y":1},"9789996":{"m":74,"y":1},"906661036":{"m":90,"y":1},"9834131":{"m":46,"y":1},"9804323":{"m":16},"9805363":{"m":27},"9810030":{"m":44}},"jugada":true},
+  3: {"n":3,"rival":"C.D. La Magdalena 'A'","local":true,"gf":3,"gc":3,"inicio":"2026-10-03T16:45","st":{"9820536":{"m":90},"9820206":{"m":90},"38058":{"m":45},"9765719":{"m":90,"pp":1},"22222328":{"m":90},"9765310":{"m":45},"9796573":{"m":45,"g":2},"9865452":{"m":45},"93225":{"m":45},"9789996":{"m":90,"y":1},"9834131":{"m":90,"g":1},"27459988":{"m":45},"9766416":{"m":45},"9805363":{"m":45},"9847079":{"m":45},"101901":{"m":45}},"jugada":true},
+  4: {"n":4,"rival":"C.D. Ribesalbes 'B'","local":false,"gf":6,"gc":0,"inicio":"2026-10-18T15:00","st":{"9860107":{"m":90},"9820206":{"m":90,"g":1},"9765719":{"m":90},"9834131":{"m":55},"22222328":{"m":90,"g":1},"9805363":{"m":55},"93225":{"m":65},"9789996":{"m":65,"y":1},"906661036":{"m":75,"g":1},"9810030":{"m":90,"y":1},"38058":{"m":90,"g":1},"9770969":{"m":25},"9865452":{"m":15},"9766416":{"m":25},"27459988":{"m":35,"g":1},"907370605":{"m":35,"g":1}},"jugada":true},
+  5: {"n":5,"rival":"F.C. Odisea 'B'","local":true,"gf":0,"gc":6,"inicio":"2026-10-25T13:06","st":{"9820536":{"m":90},"9820206":{"m":90},"9765719":{"m":59},"22222328":{"m":90},"9796573":{"m":71},"9865452":{"m":71},"93225":{"m":59},"9789996":{"m":90,"y":1},"906661036":{"m":71},"38058":{"m":90},"907370605":{"m":90,"y":1},"9834131":{"m":19,"y":1},"9766416":{"m":31,"y":1},"9770969":{"m":19,"y":1},"9805363":{"m":19},"27459988":{"m":31}},"jugada":true},
+  6: {"n":6,"rival":"PAMPA CASTELLÓN FÚTBOL CLUB","local":false,"gf":1,"gc":4,"inicio":"2026-10-31T16:00","st":{"9820536":{"m":90},"9765719":{"m":90},"9834131":{"m":46,"y":1},"22222328":{"m":90},"9796573":{"m":62},"9805363":{"m":90},"93225":{"m":62},"9783331":{"m":90,"g":1,"y":1},"906661036":{"m":90},"27459988":{"m":68},"38058":{"m":62},"9820206":{"m":28},"9766416":{"m":22},"101901":{"m":44},"9810030":{"m":28},"907370605":{"m":28}},"jugada":true},
+  7: {"n":7,"rival":"C.F. Rafalafena de Castellón","local":true,"gf":1,"gc":3,"inicio":"2026-11-08T17:15","st":{"9820536":{"m":90,"y":1},"9820206":{"m":69,"y":1},"9765719":{"m":90},"9834131":{"m":58},"9796573":{"m":90,"g":1},"101901":{"m":74},"9805363":{"m":90},"9789996":{"m":90,"y":1},"9783331":{"m":90},"9810030":{"m":69},"907370605":{"m":90},"9770969":{"m":21},"9865452":{"m":32},"9766416":{"m":21},"27459988":{"m":16}},"jugada":true},
+  8: {"n":8,"rival":"C.F. Borriol","local":false,"gf":2,"gc":5,"inicio":"2026-11-14T16:00","st":{"9860107":{"m":46},"9820206":{"m":90},"9765719":{"m":90},"9796573":{"m":90,"g":2},"9865452":{"m":90},"9766416":{"m":90},"101901":{"m":90},"9805363":{"m":64},"93225":{"m":85},"9789996":{"m":64},"9810030":{"m":64},"9820536":{"m":44},"22222328":{"m":26},"9770969":{"m":26},"9783331":{"m":26},"907370605":{"m":5}},"jugada":true}
+};
+// Calendario que queda (jornada, rival, en casa, fecha y hora)
+const CALENDARIO = [
+  [9, "C. F. Atlético Tales", true, "2026-11-22T15:00"],
+  [10, "C.D. Drac Castellón 'A'", false, "2026-11-28T16:30"],
+  [11, "Eture F.C. 'B'", true, "2026-12-12T15:00"],
+  [12, "C.F. Joventut Almassora 'A'", false, "2026-12-19T19:00"],
+  [13, "La Vilavella C.F. 'A'", true, "2027-01-09T15:00"],
+  [14, "C.F. San Pedro 'B'", false, "2027-01-17T18:00"],
+  [15, "C.F. Moro 'A'", true, "2027-01-23T15:00"],
+  [16, "C.D. San Lorenzo de Castellón", false, "2027-01-30T19:30"],
+  [17, "C.D. Castellón S.A.D. 'C'", true, "2027-02-06T15:00"],
+  [18, "C.D. La Magdalena 'A'", false, "2027-02-13T19:00"],
+  [19, "C.D. Ribesalbes 'B'", true, "2027-02-20T15:00"],
+  [20, "F.C. Odisea 'B'", false, "2027-02-27T15:00"],
+  [21, "PAMPA CASTELLÓN FÚTBOL CLUB", true, "2027-03-06T15:00"],
+  [22, "C.F. Rafalafena de Castellón", false, "2027-03-13T17:00"],
+  [23, "C.F. Borriol", true, "2027-04-03T15:00"],
+  [24, "C. F. Atlético Tales", false, "2027-04-11T16:00"],
+  [25, "C.D. Drac Castellón 'A'", true, "2027-04-17T15:00"],
+  [26, "Eture F.C. 'B'", false, "2027-04-24T16:00"],
+  [27, "C.F. Joventut Almassora 'A'", true, "2027-05-01T15:00"],
+  [28, "La Vilavella C.F. 'A'", false, "2027-05-09T17:00"],
+  [29, "C.F. San Pedro 'B'", true, "2027-05-15T15:00"],
+  [30, "C.F. Moro 'A'", false, "2027-05-23T17:00"]
+];
+const START_DAY = "2026-11-16";       // primer día de mercado (los precios cambian a las 00:00, hora de Madrid)
+const START_MONEY = 18000000;
+const MAX_FICHAS = 15;
+const DAILY = 100000;                  // recompensa diaria
+const PER_POINT = 100000;              // € por punto conseguido en la jornada
+const GOL = { POR: 10, DEF: 6, CEN: 5, DEL: 4 };
+const CLEAN = { POR: 4, DEF: 3, CEN: 1, DEL: 0 };
+const FORMS = { "4-4-2": [4, 4, 2], "4-3-3": [4, 3, 3], "3-5-2": [3, 5, 2], "3-4-3": [3, 4, 3], "4-5-1": [4, 5, 1], "5-3-2": [5, 3, 2], "5-4-1": [5, 4, 1] };
+const POSN = { POR: "Portero", DEF: "Defensa", CEN: "Centrocampista", DEL: "Delantero" };
+
+/* ---------- jugadores y precio base (según los puntos reales de J1–J8) ---------- */
+const baseValue = e => Math.round((600000 + Math.max(0, e) * 90000) / 10000) * 10000;
+let PLAYERS = [];
+function buildPlayers(extra) {
+  PLAYERS = PLANTILLA.map(([id, d, n, pos, full]) => ({ id, dorsal: d, nombre: n, full, pos }));
+  (extra || []).forEach(x => { if (!x || !x.id || PLAYERS.some(p => p.id === x.id)) return;
+    PLAYERS.push({ id: x.id, dorsal: x.dorsal || "", nombre: String(x.nombre || "Jugador"), pos: GOL[x.pos] != null ? x.pos : "CEN", v0: +x.valor || 800000 }); });
+  PLAYERS.forEach(p => { if (p.v0 == null) p.v0 = baseValue(Object.values(ACTAS).reduce((s, J) => s + pts(p, J), 0)); });
+}
+const PL = id => PLAYERS.find(p => p.id === id);
+
+/* ---------- puntos de un jugador en una jornada (del acta) ---------- */
+function ptsBreak(p, J) {
+  const s = J && J.st && J.st[p.id]; if (!s) return null;
+  if (!(+s.m > 0)) return s.y || s.r || s.pp ? [["Tarjeta en el banquillo", -(+s.y >= 2 || s.r ? 3 : +s.y ? 1 : 0)]] : null;
+  const m = +s.m, out = [], add = (t, v) => { if (v) out.push([t, v]); };
+  add(m >= 60 ? "Juega 60' o más" : "Juega menos de 60'", m >= 60 ? 2 : 1);
+  add("Goles (" + (+s.g || 0) + ")", (+s.g || 0) * GOL[p.pos]);
+  if (m >= 60 && +J.gc === 0) add("Portería a cero", CLEAN[p.pos]);
+  if (m >= 60 && (p.pos === "POR" || p.pos === "DEF")) add("Goles encajados (" + (+J.gc || 0) + ")", -Math.floor((+J.gc || 0) / 2));
+  if (+J.gf > +J.gc) add("Victoria", 2); else if (+J.gf === +J.gc) add("Empate", 1);
+  add("Gol en propia puerta", -2 * (+s.pp || 0));
+  const y = +s.y || 0;
+  if (y === 1) add("Amarilla", -1);
+  if (y >= 2) add("Doble amarilla", -3); else if (s.r) add("Roja directa", -3);
+  return out;
+}
+const pts = (p, J) => { const b = ptsBreak(p, J); return b ? b.reduce((a, x) => a + x[1], 0) : 0; };
+buildPlayers([]);
+
+/* ---------- utilidades ---------- */
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const eur = n => Math.round(n).toLocaleString("es-ES");
+const dayOf = t => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Madrid", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(t));
+const today = () => dayOf(Date.now());
+const addDay = (d, n) => { const x = new Date(d + "T12:00:00Z"); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
+const fmtD = t => new Date(t).toLocaleDateString("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", year: "numeric" });
+const fmtKick = s => { if (!s) return "Por fijar"; const d = new Date(s); if (isNaN(d)) return "Por fijar";
+  const w = d.toLocaleDateString("es-ES", { weekday: "short" }).replace(".", ""); return w[0].toUpperCase() + w.slice(1, 3) + " " + d.getDate() + "  " + String(d.getHours()).padStart(2, "0") + "." + String(d.getMinutes()).padStart(2, "0") + "h"; };
+const SIL = '<svg viewBox="0 0 100 100"><circle cx="50" cy="36" r="20"/><path d="M12 100c2-24 18-36 38-36s36 12 38 36z"/></svg>';
+const CHK = '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+const CROWN = '<svg class="crown" viewBox="0 0 24 18"><path d="M2 4l5 5 5-8 5 8 5-5-2 12H4z"/></svg>';
+
+/* =====================================================================
+   ESTADO Y DATOS COMPARTIDOS
+   jornadas/jN  (admin): { n, rival, local, inicio, gf, gc, st:{pid:{m,g,y,r}}, jugada, publicada }
+   liga/plantilla (admin): { extra:[{id,nombre,pos,dorsal,valor}] }
+   teams/<uid>  (cada uno el suyo): { name, ops:[{t,pid,price,at}], lineups:{n:{f,s,c}} }
+   ===================================================================== */
+const S = { view: "team", sub: { team: "line", market: "mk", table: "gen", more: "rules" }, uid: null, admin: false, store: "loading",
+  jornadas: {}, teams: {}, names: {}, capMode: false, sheet: null, adminJ: null };
+let db = null, userApi = null;
+
+/* ---- modo local (abierto como fichero): mismo interfaz que db, en este navegador ---- */
+function localDB() {
+  const KEY = "almac-fantasy-v1", subs = [];
+  let data; try { data = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) { data = {}; }
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) {} };
+  const snapDoc = path => ({ id: path.split("/").pop(), exists: path in data, data: () => data[path] });
+  const fire = () => subs.forEach(s => s());
+  const coll = c => ({ onSnapshot(fn) { const run = () => fn({ docs: Object.keys(data).filter(k => k.startsWith(c + "/") && k.split("/").length === c.split("/").length + 1).map(snapDoc) }); subs.push(run); setTimeout(run, 0); return () => {}; } });
+  return { collection: coll, doc: path => ({ async set(v) { data[path] = JSON.parse(JSON.stringify(v)); save(); fire(); }, async get() { return snapDoc(path); },
+    onSnapshot(fn) { const run = () => fn(snapDoc(path)); subs.push(run); setTimeout(run, 0); return () => {}; } }) };
+}
+
+/* ---- versión web (Vercel): cuentas con usuario y contraseña, datos en el servidor ---- */
+const CFG = window.FANTASY_CONFIG || {};
+const TK = "almac-fantasy-token";
+const tok = () => { try { return localStorage.getItem(TK) || ""; } catch (e) { return ""; } };
+async function api(action, body) {
+  const r = await fetch(CFG.api, { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + tok() }, body: JSON.stringify({ action, ...(body || {}) }) });
+  let j = {}; try { j = await r.json(); } catch (e) {}
+  if (!r.ok) { const err = new Error(j.error || "Error de conexión"); err.status = r.status; err.code = r.status === 403 ? "not_granted" : ""; throw err; }
+  return j;
+}
+function apiDB() {
+  let last = { jornadas: {}, teams: {}, plantilla: null }; const subs = { jornadas: [], teams: [], plantilla: [] };
+  const docs = o => ({ docs: Object.keys(o).map(k => ({ id: k, exists: true, data: () => o[k] })) });
+  const emit = () => { subs.jornadas.forEach(fn => fn(docs(last.jornadas))); subs.teams.forEach(fn => fn(docs(last.teams)));
+    subs.plantilla.forEach(fn => fn({ id: "plantilla", exists: !!last.plantilla, data: () => last.plantilla })); };
+  const poll = async () => { try { last = await api("state"); Object.keys(last.teams).forEach(k => S.names[k] = { name: k }); emit(); } catch (e) { if (e.status === 401) { S.store = "auth"; render(); } } };
+  setInterval(() => { if (!document.hidden) poll(); }, 6000); poll();
+  return {
+    collection: c => ({ onSnapshot(fn) { (subs[c] || []).push(fn); return () => {}; } }),
+    doc: path => ({
+      onSnapshot(fn) { if (path === "liga/plantilla") subs.plantilla.push(fn); return () => {}; },
+      async set(v) { const [c, id] = path.split("/");
+        if (c === "teams") await api("saveTeam", { team: v });
+        else if (c === "jornadas") await api("saveJornada", { jornada: v });
+        else if (path === "liga/plantilla") await api("savePlantilla", { plantilla: v });
+        poll(); } })
+  };
+}
+async function startApi() {
+  const me = await api("me"); S.uid = me.username; S.admin = !!me.admin; S.names[me.username] = { name: me.username };
+  db = apiDB(); S.store = "api"; subscribe(() => {}); render();
+}
+async function connectApi() {
+  if (!tok()) { S.store = "auth"; return render(); }
+  try { await startApi(); } catch (e) { S.store = "auth"; S.authMsg = e.status === 401 ? "" : e.message; render(); }
+}
+async function auth(mode) {
+  const u = (document.getElementById("au-user").value || "").trim(), pw = document.getElementById("au-pass").value || "";
+  if (u.length < 2 || pw.length < 6) { S.authMsg = "El usuario necesita 2 letras o más y la contraseña 6 caracteres o más."; return render(); }
+  S.authMsg = mode === "up" ? "Creando cuenta…" : "Entrando…"; render();
+  try { const { token } = await api(mode === "up" ? "register" : "login", { username: u, password: pw });
+    try { localStorage.setItem(TK, token); } catch (e) {}
+    S.authMsg = ""; await startApi();
+  } catch (e) { S.authMsg = e.message; render(); }
+}
+function authView() {
+  return `<div class="box" style="max-width:420px;margin:24px auto;text-align:center"><div class="logo" style="font-size:28px;margin-bottom:8px">ALMAZORA C <span>fantasy</span></div>
+    <p>El fantasy del ${esc(EQUIPO)}. Ficha, alinea y suma puntos con las actas de cada jornada.</p>
+    <div class="subt" style="margin:10px 0"><button data-auth-tab="in" class="${S.authTab !== "up" ? "on" : ""}">Entrar</button><button data-auth-tab="up" class="${S.authTab === "up" ? "on" : ""}">Crear cuenta</button></div>
+    <form id="auform" style="display:grid;gap:8px;text-align:left"><div class="fld"><label for="au-user">Usuario</label><input id="au-user" autocomplete="username" autocapitalize="off" placeholder="p. ej. moliner9"></div>
+      <div class="fld"><label for="au-pass">Contraseña</label><input id="au-pass" type="password" autocomplete="${S.authTab === "up" ? "new-password" : "current-password"}" placeholder="Mínimo 6 caracteres"></div>
+      <button class="abtn" type="submit">${S.authTab === "up" ? "Crear cuenta" : "Entrar"}</button></form>
+    <p class="note">${esc(S.authMsg || "")}</p></div>`;
+}
+
+async function connect() {
+  if (CFG.api) return connectApi();
+  const timer = setTimeout(() => { if (S.store === "loading") goLocal(); }, 10000);
+  try {
+    if (!window.claude || !window.claude.use) { clearTimeout(timer); return goLocal(); }
+    db = await window.claude.use("db"); userApi = await window.claude.use("user");
+    if (!db || !userApi) { clearTimeout(timer); return goLocal(); }
+    S.uid = await userApi.id(); S.admin = await userApi.canEdit();
+    if (!S.uid) { clearTimeout(timer); return goLocal(); }
+    subscribe(() => clearTimeout(timer));
+    S.store = "db";
+  } catch (e) { clearTimeout(timer); goLocal(); }
+}
+function goLocal() { db = localDB(); S.uid = "local"; S.admin = true; S.store = "local"; S.names.local = { name: "Tú" }; subscribe(() => {}); }
+function subscribe(ok) {
+  db.collection("jornadas").onSnapshot(snap => { ok(); const o = {}; snap.docs.forEach(d => { const v = d.data(); if (v && v.n) o[v.n] = v; }); S.jornadas = o; render(); }, () => { ok(); render(); });
+  db.collection("teams").onSnapshot(async snap => { ok(); const o = {}; snap.docs.forEach(d => o[d.id] = d.data()); S.teams = o;
+    if (userApi && S.store !== "api") { try { const ps = await userApi.profiles(Object.keys(o)); Object.keys(ps || {}).forEach(k => S.names[k] = ps[k]); } catch (e) {} }
+    render(); }, () => { ok(); render(); });
+  db.doc("liga/plantilla").onSnapshot(d => { buildPlayers(d.exists ? (d.data() || {}).extra : []); render(); }, () => {});
+}
+
+/* ---------- jornadas ---------- */
+// Jornadas: las de las actas (J1–J8) + lo que guarde el administrador. El calendario rellena rival y hora.
+const CAL = n => { const c = CALENDARIO.find(x => x[0] === n); return c ? { n, rival: c[1], local: c[2], inicio: c[3] } : null; };
+const Js = () => { const o = {}; Object.values(ACTAS).forEach(J => o[J.n] = J); Object.values(S.jornadas).forEach(J => o[J.n] = { ...(CAL(J.n) || {}), ...J }); return Object.values(o).sort((a, b) => a.n - b.n); };
+const played = () => Js().filter(j => j.jugada);
+const FIRST_J = 9;   // el fantasy empieza a puntuar en la jornada 9
+const fplayed = () => played().filter(j => j.n >= FIRST_J);
+// Jornada en juego: la primera creada y sin puntos publicados; si no hay, la siguiente a la última jugada
+function curJ() { const open = Js().find(j => !j.jugada); if (open) return open; const l = played().pop(), n = l ? l.n + 1 : 9; return { ...(CAL(n) || {}), n, virtual: true }; }
+const locked = J => !J.jugada && J.inicio && Date.now() >= new Date(J.inicio).getTime();
+
+/* ---------- equipos ---------- */
+const myTeam = () => S.teams[S.uid] || { name: "", ops: [], lineups: {} };
+function squadOf(t) { const s = new Set(); (t.ops || []).forEach(o => { if (o.t === "buy") s.add(o.pid); else if (o.t === "sell") s.delete(o.pid); }); return [...s].filter(PL); }
+function lineupFor(t, n) {
+  const L = t.lineups || {}; let k = null;
+  Object.keys(L).map(Number).filter(x => x <= n).forEach(x => { if (k == null || x > k) k = x; });
+  const l = k != null ? L[k] : null; return l ? { f: FORMS[l.f] ? l.f : "4-4-2", s: (l.s || []).slice(0, 11), c: l.c || null } : { f: "4-4-2", s: Array(11).fill(null), c: null };
+}
+function teamJPts(t, J) {   // null = no puntúa (alineación incompleta)
+  const l = lineupFor(t, J.n), ids = l.s.filter(Boolean);
+  if (ids.length < 11) return { total: null, l };
+  let total = 0; ids.forEach(id => { const p = PL(id); if (p) total += pts(p, J) * (id === l.c ? 2 : 1); });
+  return { total, l };
+}
+function teamTotals(t) { let total = 0; const per = {}; fplayed().forEach(J => { const r = teamJPts(t, J); per[J.n] = r.total; total += r.total || 0; }); return { total, per }; }
+function money(t) {
+  let m = START_MONEY; (t.ops || []).forEach(o => { if (o.t === "buy") m -= o.price; else if (o.t === "sell") m += o.price; else if (o.t === "daily") m += DAILY; });
+  fplayed().forEach(J => { const r = teamJPts(t, J); if (r.total > 0) m += r.total * PER_POINT; }); return m;
+}
+
+/* =====================================================================
+   PRECIOS DIARIOS: rendimiento + oferta y demanda
+   Cada día (00:00 hora de Madrid) el precio de cada jugador cambia:
+   · Demanda: fichajes menos ventas de ese jugador el día anterior → +4 % por compra neta (tope ±12 %).
+   · Popularidad: si lo tiene más de 1 de cada 4 equipos sube un poco, si no lo tiene nadie baja un poco (±1 %).
+   · Rendimiento: el día siguiente a publicar una jornada, (puntos − 3) × 4 % (tope −15 % / +25 %).
+   ===================================================================== */
+let PRICE = { day: null, key: "", map: {} };
+function prices() {
+  const tday = today(), opsAll = [], teams = Object.values(S.teams);
+  teams.forEach(t => (t.ops || []).forEach(o => { if (o.t === "buy" || o.t === "sell") opsAll.push(o); }));
+  const key = tday + "|" + opsAll.length + "|" + played().map(j => j.n + ":" + j.publicada).join(",") + "|" + PLAYERS.length + "|" + teams.length;
+  if (PRICE.key === key) return PRICE.map;
+  const net = {}, own = {}; // net[day][pid]
+  opsAll.sort((a, b) => a.at - b.at).forEach(o => { const d = dayOf(o.at); (net[d] = net[d] || {})[o.pid] = (net[d][o.pid] || 0) + (o.t === "buy" ? 1 : -1); });
+  const perf = {}; played().forEach(J => { if (!J.publicada) return; const d = addDay(dayOf(J.publicada), 1); (perf[d] = perf[d] || []).push(J); });
+  const map = {}; PLAYERS.forEach(p => map[p.id] = { v: p.v0, hist: [[START_DAY, p.v0]] });
+  const nTeams = Math.max(1, teams.length);
+  for (let d = addDay(START_DAY, 1); d <= tday; d = addDay(d, 1)) {
+    const prev = addDay(d, -1), nd = net[prev] || {};
+    Object.keys(nd).forEach(pid => own[pid] = (own[pid] || 0) + nd[pid]);
+    PLAYERS.forEach(p => {
+      let ch = Math.max(-0.12, Math.min(0.12, 0.04 * (nd[p.id] || 0)));
+      const share = (own[p.id] || 0) / nTeams; ch += share > 0.25 ? 0.01 : share === 0 ? -0.01 : 0;
+      (perf[d] || []).forEach(J => { if (J.st && J.st[p.id] && +J.st[p.id].m > 0) ch += Math.max(-0.15, Math.min(0.25, (pts(p, J) - 3) * 0.04)); else ch -= 0.03; });
+      const m = map[p.id]; m.v = Math.max(200000, Math.round(m.v * (1 + ch) / 1000) * 1000); m.hist.push([d, m.v]);
+    });
+  }
+  PLAYERS.forEach(p => { const h = map[p.id].hist; map[p.id].prev = h.length > 1 ? h[h.length - 2][1] : h[0][1]; });
+  PRICE = { key, map }; return map;
+}
+const val = id => (prices()[id] || { v: 0 }).v;
+const trendH = id => { const m = prices()[id]; if (!m) return ""; const d = m.v - m.prev; if (!d) return '<span class="trend" style="color:var(--muted)">= 0</span>';
+  return `<span class="trend ${d > 0 ? "up" : "dn"}">${d > 0 ? "▲ +" : "▼ "}${eur(d)}</span>`; };
+
+/* ---------- escritura ---------- */
+let saving = Promise.resolve();
+function saveTeam(t) { S.teams[S.uid] = t; render(); saving = saving.then(() => db.doc("teams/" + S.uid).set(t)).catch(e => toast(e && e.code === "not_granted" ? "No tienes permiso para jugar en esta página." : "No se ha podido guardar.")); }
+function cloneMine() { const t = myTeam(); return { name: t.name || "", ops: (t.ops || []).slice(), lineups: JSON.parse(JSON.stringify(t.lineups || {})) }; }
+function setLineup(t, l) { const J = curJ(); t.lineups[J.n] = l; }
+
+function buy(pid) {
+  const t = cloneMine(), sq = squadOf(t), p = PL(pid), price = val(pid);
+  if (sq.includes(pid)) return;
+  if (sq.length >= MAX_FICHAS) return toast("Tienes el máximo de " + MAX_FICHAS + " fichas.");
+  if (money(t) < price) return toast("No te llega el saldo.");
+  t.ops.push({ t: "buy", pid, price, at: Date.now() }); saveTeam(t); toast("Has fichado a " + p.nombre + " por " + eur(price) + " €");
+}
+function sell(pid) {
+  const t = cloneMine(), p = PL(pid), price = val(pid), J = curJ(), l = lineupFor(t, J.n);
+  if (locked(J) && l.s.includes(pid)) return toast("Está en tu alineación de una jornada en juego. Véndelo cuando se publiquen los puntos.");
+  t.ops.push({ t: "sell", pid, price, at: Date.now() });
+  if (l.s.includes(pid)) { const s = l.s.map(x => x === pid ? null : x); setLineup(t, { f: l.f, s, c: l.c === pid ? null : l.c }); }
+  saveTeam(t); toast("Has vendido a " + p.nombre + " por " + eur(price) + " €");
+}
+function claimDaily() { const t = cloneMine(); if (dailyDone(t)) return; t.ops.push({ t: "daily", at: Date.now() }); saveTeam(t); toast("+" + eur(DAILY) + " €"); }
+const dailyDone = t => (t.ops || []).some(o => o.t === "daily" && dayOf(o.at) === today());
+
+/* =====================================================================
+   VISTAS
+   ===================================================================== */
+const SUBS = { team: [["line", "Alineación"], ["squad", "Plantilla"], ["pts", "Puntos"]], market: [["mk", "Mercado"], ["ops", "Mis operaciones"], ["hist", "Histórico"]],
+  table: [["gen", "General"], ["jor", "Por jornada"]], more: [["rules", "Reglas"], ["admin", "Admin"]] };
+function render() {
+  document.querySelectorAll("nav.bn button").forEach(b => b.classList.toggle("on", b.dataset.go === S.view));
+  const subs = SUBS[S.view] || [];
+  document.getElementById("subt").innerHTML = S.view === "activity" ? '<div class="subt single"></div>' :
+    `<div class="subt">${subs.map(([k, l]) => `<button data-sub="${k}" class="${S.sub[S.view] === k ? "on" : ""}">${l}</button>`).join("")}</div>`;
+  const main = document.getElementById("main"), info = document.getElementById("info"), bar = document.getElementById("mkbar");
+  info.innerHTML = ""; bar.innerHTML = "";
+  if (S.store === "loading") { main.innerHTML = '<div class="empty">Cargando…</div>'; return; }
+  if (S.store === "auth") { document.getElementById("subt").innerHTML = ""; main.innerHTML = authView(); return; }
+  const t = myTeam();
+  if (S.view === "team" || S.view === "market") info.innerHTML = infoBar(t);
+  const v = S.view, sub = S.sub[v];
+  main.innerHTML = (v === "team" && !t.name && !(t.ops || []).length ? welcome() : "") +
+    (v === "team" ? (sub === "line" ? lineView(t) : sub === "squad" ? squadView(t) : ptsView(t)) :
+     v === "market" ? (sub === "mk" ? marketView(t) : sub === "ops" ? opsView(t) : histView()) :
+     v === "table" ? tableView() : v === "activity" ? activityView() : sub === "admin" ? adminView() : rulesView()) +
+    (S.store === "local" ? '<div class="mode">Modo local: se guarda en este navegador y eres el administrador.</div>' : "");
+  if (v === "market") bar.innerHTML = `<div class="mkbar"><div><span>Tu saldo</span><b>${eur(money(t))} <span class="coin">€</span></b></div></div><div class="mkpad"></div>`;
+  renderSheet();
+}
+function infoBar(t) {
+  const J = curJ(), sq = squadOf(t), tv = sq.reduce((s, id) => s + val(id), 0);
+  return `<div class="app"><div class="info"><div><small>Fichas</small><b>${sq.length}/${MAX_FICHAS}</b></div>
+    <div class="c"><small>Inicio jornada ${J.n}</small><b>${esc(fmtKick(J.inicio))}</b></div>
+    <div class="r"><small>Valor equipo</small><b><span class="coin g">€</span> ${eur(tv)}</b></div></div></div>`;
+}
+function rewardBox(t) {
+  if (dailyDone(t)) return "";
+  return `<div class="reward"><p>¡Tienes tu recompensa diaria disponible!</p><div class="amt"><span class="coin">€</span> +${eur(DAILY)}</div><button class="ybtn" data-act="daily">Recoger recompensa</button></div>`;
+}
+function welcome() {
+  return `<div class="box"><h3>Ponle nombre a tu equipo</h3><p>Empiezas con ${eur(START_MONEY)} €. Ficha en el Mercado y alinea 11 antes de cada partido del ${esc(EQUIPO)}.</p>
+    <div class="row2"><input id="tname" maxlength="28" placeholder="p. ej. Los del 10" style="flex:1;min-width:0;background:#14151b;color:var(--fg);border:1px solid var(--line);padding:10px;font:inherit"><button class="abtn" data-act="tname">Guardar</button></div></div>`;
+}
+
+/* ---- Alineación ---- */
+function lineView(t) {
+  const J = curJ(), l = lineupFor(t, J.n), lk = locked(J), rows = FORMS[l.f], sq = new Set(squadOf(t));
+  const lastJ = played().slice(-1)[0];
+  let i = 1; const lines = [[["POR", 0]]].concat([["DEF", rows[0]], ["CEN", rows[1]], ["DEL", rows[2]]].map(([pos, n]) => { const a = []; for (let k = 0; k < n; k++) a.push([pos, i++]); return a; }));
+  // Puntos de la última jornada publicada, si el jugador estaba en esa alineación
+  const prevL = lastJ ? lineupFor(t, lastJ.n) : null;
+  const slot = ([pos, idx]) => {
+    const id = l.s[idx], p = id && sq.has(id) ? PL(id) : null;
+    if (!p) return `<button class="slot empty" data-slot="${idx}" data-pos="${pos}" ${lk ? "disabled" : ""}><div class="face">${SIL}</div><div class="nm">${pos}</div></button>`;
+    const pp = lastJ && J.n !== lastJ.n ? pts(p, lastJ) : null;
+    return `<button class="slot full" data-slot="${idx}" data-pos="${pos}" ${lk ? "disabled" : ""}><div class="face">${SIL}<span class="num">${esc(p.dorsal)}</span>${l.c === id ? `<span class="cap">${CROWN}</span>` : ""}</div><div class="nm">${esc(short(p.nombre))}</div>${pp == null ? "" : `<span class="badge ${pp < 0 ? "neg" : ""}" title="Puntos en la J${lastJ.n}">${pp}</span>`}</button>`;
+  };
+  const opts = Object.keys(FORMS).map(f => `<option value="${f}" ${f === l.f ? "selected" : ""}>${f.replace(/-/g, "·")}</option>`).join("");
+  const filled = l.s.filter(x => x && sq.has(x)).length;
+  return rewardBox(t) +
+    (lk ? `<div class="lockmsg">La jornada ${J.n} ya ha empezado. La alineación está cerrada hasta que se publiquen los puntos.</div>` : "") +
+    `<div class="row2"><select class="form" id="form" ${lk ? "disabled" : ""} aria-label="Formación">${opts}</select>
+      <button class="capbtn ${S.capMode ? "on" : ""}" data-act="cap" ${lk ? "disabled" : ""}>${CROWN} ${S.capMode ? "Toca un jugador" : "Asignar capitán"}</button></div>
+    <div class="note">${filled}/11 alineados${filled < 11 ? " · Con menos de 11 no puntúas en la jornada." : ""}${J.rival ? " · Jornada " + J.n + ": " + esc(vsTxt(J)) : ""}</div>
+    <div class="pitch">${lines.slice().reverse().map(L => `<div class="line">${L.map(slot).join("")}</div>`).join("")}</div>`;
+}
+const short = n => { const p = n.split(" "); return p.length > 1 ? p[0][0] + ". " + p.slice(1).join(" ") : n; };
+const vsTxt = J => J.local ? "Almazora C vs " + (J.rival || "?") : (J.rival || "?") + " vs Almazora C";
+
+/* ---- Plantilla ---- */
+function pcard(p, t, mode) {
+  const m = prices()[p.id], pl = played(), last5 = pl.slice(-5);
+  const pf = pl.reduce((s, J) => s + pts(p, J), 0), apps = pl.filter(J => J.st && J.st[p.id] && +J.st[p.id].m > 0).length;
+  const media = apps ? (pf / apps).toFixed(2).replace(".", ",") : "0";
+  const boxes = Array.from({ length: 5 }, (_, k) => { const J = last5[k - (5 - last5.length)]; if (!J) return '<i class="x">–</i>';
+    const played_ = J.st && J.st[p.id] && +J.st[p.id].m > 0, v = pts(p, J); return `<i class="${!played_ ? "x" : v > 2 ? "p" : v > 0 ? "z" : "n"}">${played_ ? v : "–"}</i>`; }).join("");
+  const inL = mode === "squad" && lineupFor(t, curJ().n).s.includes(p.id);
+  const btn = mode === "squad" ? `<button class="abtn" data-sell="${p.id}">Vender</button>` :
+    `<button class="abtn" data-buy="${p.id}" ${squadOf(t).includes(p.id) ? "disabled" : ""}>${squadOf(t).includes(p.id) ? "Fichado" : "Fichar"}</button>`;
+  return `<div class="pcard"><div class="ph">${SIL}<span class="num">${esc(p.dorsal)}</span>${inL ? `<span class="inxi">${CHK}</span>` : ""}</div><div class="bd">
+    <div class="tt"><span class="pos ${p.pos}">${p.pos}</span><b>${esc(p.nombre)}</b></div><div class="big">PFSY<b>${pf}</b></div>
+    <div class="ln"><span class="ck">${CHK}</span>Alineable</div><div class="rt">MEDIA: <b>${media}</b></div>
+    <div class="ln"><span class="coin">€</span>${eur(m.v)}</div><div class="rt">${trendH(p.id)}</div>
+    <div class="boxes">${boxes}</div><div>${btn}</div></div></div>`;
+}
+function squadView(t) {
+  const sq = squadOf(t).map(PL).sort((a, b) => "PORDEFCENDEL".indexOf(a.pos) - "PORDEFCENDEL".indexOf(b.pos));
+  return rewardBox(t) + (sq.length ? sq.map(p => pcard(p, t, "squad")).join("") : `<div class="empty">Aún no tienes jugadores. Ve al <button class="gbtn" data-go="market">Mercado</button></div>`) +
+    `<div class="note">PFSY: puntos de la temporada según las actas. Cuadros: puntos de las 5 últimas jornadas.</div>`;
+}
+
+/* ---- Puntos ---- */
+function ptsView(t) {
+  const pl = fplayed().slice().reverse(); if (!pl.length) return `<div class="empty">El fantasy empieza a puntuar en la jornada ${FIRST_J}. Aquí verás tus puntos de cada jornada.</div>`;
+  return pl.map(J => { const r = teamJPts(t, J);
+    const rows = r.l.s.filter(Boolean).map(id => { const p = PL(id); if (!p) return ""; const v = pts(p, J) * (id === r.l.c ? 2 : 1);
+      return `<tr><td><span class="pos ${p.pos}">${p.pos}</span> ${esc(p.nombre)}${id === r.l.c ? " (C ×2)" : ""}</td><td>${v}</td></tr>`; }).join("");
+    return `<div class="box"><h3>Jornada ${J.n} · ${esc(vsTxt(J))} ${+J.local ? J.gf + "-" + J.gc : J.gc + "-" + J.gf}</h3>
+      ${r.total == null ? `<p>No has puntuado: alineación incompleta.</p>` : `<p>Total: <b>${r.total} puntos</b> · Premio: ${eur(Math.max(0, r.total) * PER_POINT)} €</p><table>${rows}</table>`}</div>`; }).join("");
+}
+
+/* ---- Mercado ---- */
+function marketView(t) {
+  const sq = new Set(squadOf(t)), pos = S.mpos || "ALL";
+  const list = PLAYERS.filter(p => pos === "ALL" || p.pos === pos).sort((a, b) => (sq.has(a.id) - sq.has(b.id)) || val(b.id) - val(a.id));
+  return rewardBox(t) + `<div class="chips">${[["ALL", "Todos"], ["POR", "Porteros"], ["DEF", "Defensas"], ["CEN", "Medios"], ["DEL", "Delanteros"]].map(([k, l]) => `<button data-mpos="${k}" class="${pos === k ? "on" : ""}">${l}</button>`).join("")}</div>` +
+    `<div class="note">Los precios cambian cada día a las 00:00 según fichajes, ventas y puntos de la última jornada.</div>` + list.map(p => pcard(p, t, "market")).join("");
+}
+function opsView(t) {
+  const ops = (t.ops || []).filter(o => o.t !== "daily").slice().reverse();
+  if (!ops.length) return '<div class="empty">Aún no has hecho operaciones.</div>';
+  return ops.map(o => { const p = PL(o.pid); return `<div class="act"><div class="h"><b>${o.t === "buy" ? "Fichaje" : "Venta"}</b><span>${fmtD(o.at)}</span></div><p>${p ? esc(p.nombre) : "Jugador"} por ${eur(o.price)} €</p></div>`; }).join("");
+}
+function histView() {
+  const map = prices();
+  return `<div class="note">Precio de cada jugador en los últimos 10 días.</div><div class="tbl">` + PLAYERS.slice().sort((a, b) => map[b.id].v - map[a.id].v).map(p => {
+    const h = map[p.id].hist.slice(-10), mx = Math.max(...h.map(x => x[1])), mn = Math.min(...h.map(x => x[1]));
+    const bars = h.map((x, i) => `<i class="${i && x[1] > h[i - 1][1] ? "u" : i && x[1] < h[i - 1][1] ? "d" : ""}" style="height:${mx === mn ? 50 : 20 + 80 * (x[1] - mn) / (mx - mn)}%"></i>`).join("");
+    return `<div class="tr" style="grid-template-columns:minmax(0,1fr) 70px auto"><div class="t"><b><span class="pos ${p.pos}">${p.pos}</span> ${esc(p.nombre)}</b><small>${trendH(p.id)}</small></div><div class="spark">${bars}</div><div class="p" style="font-size:15px">${eur(map[p.id].v)}</div></div>`; }).join("") + "</div>";
+}
+
+/* ---- Clasificación ---- */
+const nameOf = uid => (S.names[uid] && S.names[uid].name) || "Jugador";
+function tableView() {
+  const pl = fplayed(), sub = S.sub.table, jn = S.tj || (pl.length ? pl[pl.length - 1].n : null);
+  const rows = Object.entries(S.teams).map(([uid, t]) => { const tt = teamTotals(t);
+    return { uid, t, total: sub === "gen" ? tt.total : (tt.per[jn] == null ? null : tt.per[jn]), value: squadOf(t).reduce((s, id) => s + val(id), 0) }; })
+    .sort((a, b) => (b.total ?? -999) - (a.total ?? -999) || b.value - a.value);
+  if (!rows.length) return '<div class="empty">Todavía no hay equipos. Sé el primero.</div>';
+  const chips = sub === "jor" ? (pl.length ? `<div class="chips">${pl.map(J => `<button data-tj="${J.n}" class="${J.n === jn ? "on" : ""}">J${J.n}</button>`).join("")}</div>` : '<div class="empty">Aún no hay jornadas jugadas.</div>') : "";
+  if (sub === "jor" && !pl.length) return chips;
+  return chips + `<div class="tbl">${rows.map((r, i) => `<div class="tr ${r.uid === S.uid ? "me" : ""}"><div class="n">${i + 1}</div><div class="t"><b>${esc(r.t.name || "Sin nombre")}</b><small>${esc(nameOf(r.uid))} · ${eur(r.value)} €</small></div>
+    <div class="p">${r.total == null ? "–" : r.total}<small>puntos</small></div></div>`).join("")}</div>`;
+}
+
+/* ---- Actividad ---- */
+function activityView() {
+  const items = [];
+  Object.entries(S.teams).forEach(([uid, t]) => {
+    const nm = t.name || nameOf(uid);
+    (t.ops || []).forEach(o => { const p = PL(o.pid); if (o.t === "buy" || o.t === "sell")
+      items.push({ at: o.at, h: "Operación de mercado", p: `${nm} ha ${o.t === "buy" ? "comprado" : "vendido"} al jugador ${p ? p.nombre : "?"} por ${eur(o.price)}€` }); });
+    fplayed().forEach(J => { if (!J.publicada) return; const r = teamJPts(t, J);
+      items.push(r.total == null ? { at: J.publicada, h: "No puntuación", p: `En la jornada ${J.n}, ${nm} no ha puntuado debido a alineación incompleta.` }
+        : { at: J.publicada, h: "Recompensa", p: `En la jornada ${J.n}, ${nm} ha ganado ${eur(Math.max(0, r.total) * PER_POINT)}€ (${r.total} puntos)` }); });
+  });
+  played().forEach(J => J.publicada && items.push({ at: J.publicada + 1, h: "Jornada " + J.n, p: `${vsTxt(J)}: ${J.local ? J.gf + "-" + J.gc : J.gc + "-" + J.gf}. Puntos publicados.` }));
+  items.sort((a, b) => b.at - a.at);
+  return items.length ? items.slice(0, 120).map(x => `<div class="act"><div class="h"><b>${esc(x.h)}</b><span>${fmtD(x.at)}</span></div><p>${esc(x.p)}</p></div>`).join("") : '<div class="empty">Sin actividad todavía.</div>';
+}
+
+/* ---- Reglas ---- */
+function rulesView() {
+  return `<div class="box"><h3>Cómo se juega</h3><p>Empiezas con ${eur(START_MONEY)} €. Ficha hasta ${MAX_FICHAS} jugadores del ${esc(EQUIPO)} y alinea 11 antes de que empiece cada partido. Si alineas menos de 11, no puntúas esa jornada. El capitán puntúa doble.</p>
+    <p>Cada punto que haga tu once te da ${eur(PER_POINT)} €. Recompensa diaria: ${eur(DAILY)} €. Los jugadores no son exclusivos: varios pueden tener al mismo.</p></div>
+    <div class="box"><h3>Puntos (según el acta)</h3><table>
+    <tr><td>Juega menos de 60' / 60' o más</td><td>+1 / +2</td></tr>
+    <tr><td>Gol de portero / defensa / medio / delantero</td><td>+10 / +6 / +5 / +4</td></tr>
+    <tr><td>Portería a cero (60'+) portero / defensa / medio</td><td>+4 / +3 / +1</td></tr>
+    <tr><td>Por cada 2 goles encajados (portero y defensa, 60'+)</td><td>−1</td></tr>
+    <tr><td>Victoria / empate (si juega)</td><td>+2 / +1</td></tr>
+    <tr><td>Amarilla / doble amarilla o roja</td><td>−1 / −3</td></tr>
+    <tr><td>Gol en propia puerta</td><td>−2</td></tr></table><p class="note">J1–J8 ya están puntuadas con las actas de la FFCV. Desde la J9, el administrador mete cada acta.</p></div>
+    <div class="box"><h3>Precios</h3><p>Cambian cada día a las 00:00:</p><ul>
+    <li>Oferta y demanda: +4 % por cada fichaje neto del día anterior (fichajes − ventas), tope ±12 %.</li>
+    <li>Popularidad: +1 % si lo tiene más de 1 de cada 4 equipos; −1 % si no lo tiene nadie.</li>
+    <li>Rendimiento: el día después de publicar una jornada, (puntos − 3) × 4 % (entre −15 % y +25 %). Si no juega, −3 %.</li></ul>
+    <p>Vendes al precio del día.</p></div>` + (S.store === "api" ? `<div class="box"><p>Has entrado como <b>${esc(S.uid)}</b>.</p><button class="gbtn" data-act="logout">Cerrar sesión</button></div>` : "");
+}
+
+/* ---- Admin: meter el acta ---- */
+function adminView() {
+  if (!S.admin) return '<div class="empty">Solo el administrador mete las actas.</div>';
+  const J = S.adminJ || (() => { const c = curJ(); return c.virtual ? { n: c.n, rival: c.rival || "", local: c.local !== false, inicio: c.inicio || "", gf: 0, gc: 0, st: {} } : JSON.parse(JSON.stringify(c)); })();
+  S.adminJ = J;
+  const list = Js().filter(j => j.n > 8 || S.jornadas[j.n]).map(j => `<button data-aj="${j.n}" class="${j.n === J.n ? "on" : ""}">J${j.n}${j.jugada ? " ✓" : ""}</button>`).join("");
+  const rows = PLAYERS.map(p => { const s = J.st[p.id] || {}; return `<div class="nm"><span class="pos ${p.pos}">${p.pos}</span> ${esc(p.nombre)}</div>
+    <input type="number" min="0" max="120" inputmode="numeric" data-st="${p.id}" data-k="m" value="${s.m || ""}" placeholder="0">
+    <input type="number" min="0" max="9" inputmode="numeric" data-st="${p.id}" data-k="g" value="${s.g || ""}" placeholder="0">
+    <select data-st="${p.id}" data-k="y">${[0, 1, 2].map(v => `<option ${+s.y === v ? "selected" : ""}>${v}</option>`).join("")}</select>
+    <input type="checkbox" data-st="${p.id}" data-k="r" ${s.r ? "checked" : ""} style="width:20px;height:20px;justify-self:center">`; }).join("");
+  return `<div class="chips">${list}<button data-aj="new">+ Nueva</button></div>
+  <div class="box"><h3>Jornada ${J.n}${J.jugada ? " · puntos publicados" : ""}</h3>
+    <div class="grid2"><div class="fld"><label>Rival</label><input data-j="rival" value="${esc(J.rival || "")}" placeholder="C.F. Atlético Tales"></div>
+    <div class="fld"><label>Campo</label><select data-j="local"><option value="1" ${J.local ? "selected" : ""}>En casa</option><option value="0" ${!J.local ? "selected" : ""}>Fuera</option></select></div>
+    <div class="fld"><label>Inicio (cierra alineaciones)</label><input type="datetime-local" data-j="inicio" value="${esc(J.inicio || "")}"></div>
+    <div class="grid2"><div class="fld"><label>Goles Almazora C</label><input type="number" min="0" data-j="gf" value="${+J.gf || 0}"></div><div class="fld"><label>Goles rival</label><input type="number" min="0" data-j="gc" value="${+J.gc || 0}"></div></div></div>
+    <p class="note">Del acta: minutos jugados (titular que acaba = 90, cambio = minuto del cambio), goles, amarillas (2 = doble amarilla) y roja directa. No convocado o sin jugar: déjalo vacío.</p>
+    <div class="acta"><span class="h">Jugador</span><span class="h">Min</span><span class="h">Gol</span><span class="h">Am.</span><span class="h">Roja</span>${rows}</div>
+    <div class="row2" style="margin-top:14px"><button class="gbtn" data-act="jsave">Guardar</button>
+      ${J.jugada ? `<button class="gbtn" data-act="jreopen">Quitar publicación</button>` : `<button class="abtn" data-act="jpub">Publicar puntos</button>`}</div></div>
+  <div class="box"><h3>Añadir jugador a la plantilla</h3><div class="grid2"><div class="fld"><label>Nombre</label><input id="nxN"></div><div class="fld"><label>Dorsal</label><input id="nxD" type="number"></div>
+    <div class="fld"><label>Posición</label><select id="nxP"><option>POR</option><option>DEF</option><option selected>CEN</option><option>DEL</option></select></div><div class="fld"><label>Precio inicial</label><input id="nxV" type="number" value="800000"></div></div>
+    <button class="gbtn" data-act="addpl">Añadir</button></div>`;
+}
+function readAdminForm() {
+  const J = S.adminJ; document.querySelectorAll("[data-j]").forEach(el => { const k = el.dataset.j; J[k] = k === "local" ? el.value === "1" : k === "gf" || k === "gc" ? +el.value || 0 : el.value; });
+  const st = {}; document.querySelectorAll("[data-st]").forEach(el => { const id = el.dataset.st, k = el.dataset.k; st[id] = st[id] || {};
+    st[id][k] = k === "r" ? el.checked : +el.value || 0; });
+  Object.keys(st).forEach(id => { const s = st[id]; if (!s.m && !s.g && !s.y && !s.r) delete st[id]; }); J.st = st; return J;
+}
+async function saveJ(J) { try { await db.doc("jornadas/j" + J.n).set(J); toast("Guardado"); } catch (e) { toast(e && e.code === "not_granted" ? "Solo el administrador puede guardar actas." : "No se ha podido guardar."); } }
+
+/* ---- hoja de selección de jugador ---- */
+function renderSheet() {
+  const el = document.getElementById("sheet"); if (!S.sheet) { el.innerHTML = ""; return; }
+  const t = myTeam(), J = curJ(), l = lineupFor(t, J.n), { idx, pos } = S.sheet, cur = l.s[idx];
+  const opts = squadOf(t).map(PL).filter(p => p.pos === pos && (!l.s.includes(p.id) || p.id === cur));
+  el.innerHTML = `<div class="sheet" data-close="1"><div class="in"><h3>Elige ${POSN[pos].toLowerCase()}</h3>
+    ${opts.length ? opts.map(p => `<button class="opt" data-pick="${p.id}"><b>${esc(p.nombre)}${p.id === cur ? " ✓" : ""}</b><span>${eur(val(p.id))} €</span></button>`).join("") : `<p class="note">No tienes ${POSN[pos].toLowerCase()}s libres. Ficha en el Mercado.</p>`}
+    ${cur ? `<button class="opt" data-pick=""><b>Quitar de la alineación</b></button>` : ""}
+    <button class="gbtn" data-close="1" style="width:100%;margin-top:6px">Cerrar</button></div></div>`;
+}
+
+/* ---------- eventos ---------- */
+let toastT; function toast(m) { const t = document.getElementById("toast"); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2600); }
+document.addEventListener("click", e => {
+  const b = e.target.closest("button,[data-close]"); if (!b) return; const d = b.dataset;
+  if (d.close && e.target === b) { S.sheet = null; return render(); }
+  if (d.authTab) { S.authTab = d.authTab; S.authMsg = ""; return render(); }
+  if (d.act === "logout") { api("logout").catch(() => {}); try { localStorage.removeItem(TK); } catch (e) {} return location.reload(); }
+  if (d.go) { S.view = d.go; S.capMode = false; scrollTo(0, 0); return render(); }
+  if (d.sub) { S.sub[S.view] = d.sub; scrollTo(0, 0); return render(); }
+  if (d.mpos) { S.mpos = d.mpos; return render(); }
+  if (d.tj) { S.tj = +d.tj; return render(); }
+  if (d.buy) return buy(d.buy);
+  if (d.sell) return sell(d.sell);
+  if (d.slot != null && d.slot !== undefined && b.classList.contains("slot")) {
+    const t = myTeam(), J = curJ(), l = lineupFor(t, J.n), id = l.s[+d.slot];
+    if (S.capMode) { if (!id) return; const nt = cloneMine(); setLineup(nt, { f: l.f, s: l.s, c: id }); S.capMode = false; saveTeam(nt); return toast("Capitán: " + PL(id).nombre); }
+    S.sheet = { idx: +d.slot, pos: d.pos }; return render();
+  }
+  if (d.pick != null) { const t = cloneMine(), J = curJ(), l = lineupFor(t, J.n), s = l.s.slice(); s[S.sheet.idx] = d.pick || null;
+    setLineup(t, { f: l.f, s, c: s.includes(l.c) ? l.c : null }); S.sheet = null; return saveTeam(t); }
+  const a = d.act;
+  if (a === "daily") return claimDaily();
+  if (a === "cap") { S.capMode = !S.capMode; return render(); }
+  if (a === "tname") { const v = (document.getElementById("tname").value || "").trim().slice(0, 28); if (!v) return; const t = cloneMine(); t.name = v; return saveTeam(t); }
+  if (d.aj) { if (d.aj === "new") { const mx = Math.max(8, ...Js().map(j => j.n)), c = CAL(mx + 1) || {}; S.adminJ = { n: mx + 1, rival: c.rival || "", local: c.local !== false, inicio: c.inicio || "", gf: 0, gc: 0, st: {} }; }
+    else S.adminJ = JSON.parse(JSON.stringify(Js().find(j => j.n === +d.aj))); return render(); }
+  if (a === "jsave") return saveJ(readAdminForm());
+  if (a === "jpub") { const J = readAdminForm(); J.jugada = true; J.publicada = Date.now(); return saveJ(J); }
+  if (a === "jreopen") { const J = readAdminForm(); J.jugada = false; delete J.publicada; return saveJ(J); }
+  if (a === "addpl") { const n = (document.getElementById("nxN").value || "").trim(); if (!n) return;
+    const extra = PLAYERS.filter(p => !PLANTILLA.some(x => x[0] === p.id)).map(p => ({ id: p.id, nombre: p.nombre, pos: p.pos, dorsal: p.dorsal, valor: p.v0 }));
+    extra.push({ id: "x" + Date.now().toString(36), nombre: n, pos: document.getElementById("nxP").value, dorsal: +document.getElementById("nxD").value || "", valor: +document.getElementById("nxV").value || 800000 });
+    db.doc("liga/plantilla").set({ extra }).then(() => toast("Añadido"), () => toast("No se ha podido añadir.")); }
+});
+document.addEventListener("submit", e => { if (e.target.id === "auform") { e.preventDefault(); auth(S.authTab === "up" ? "up" : "in"); } });
+document.addEventListener("change", e => {
+  if (e.target.id === "form") { const f = e.target.value; const t = cloneMine(), J = curJ(), l = lineupFor(t, J.n), rows = FORMS[f];
+    // recoloca a los jugadores por posición en la nueva formación
+    const byPos = { POR: [], DEF: [], CEN: [], DEL: [] }; l.s.forEach(id => { const p = id && PL(id); if (p) byPos[p.pos].push(id); });
+    const s = [byPos.POR[0] || null]; [["DEF", rows[0]], ["CEN", rows[1]], ["DEL", rows[2]]].forEach(([pos, n]) => { for (let k = 0; k < n; k++) s.push(byPos[pos][k] || null); });
+    setLineup(t, { f, s, c: s.includes(l.c) ? l.c : null }); saveTeam(t); }
+});
+setInterval(() => { if (S.store !== "loading" && !document.querySelector("input:focus,select:focus")) render(); }, 60000);
+render(); connect();
+</script>
+
+<script>if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});</script>
+</body>
+</html>
