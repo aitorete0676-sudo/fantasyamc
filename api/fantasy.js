@@ -134,7 +134,30 @@ async function newTeam(name) {
   return { name: "", money: G.START_MONEY, squad: best.squad, lineups: {}, daily: "", joined: Date.now() };
 }
 
+/* ---------- reinicio de la liga (cuando cambian los precios): todos 100 M y plantilla nueva, se mantienen cuentas y nombres ---------- */
+const LEAGUE_VER = 2;
+async function ensureLeague() {
+  if (String(await redis("GET", "leaguever")) === String(LEAGUE_VER)) return;
+  if (!(await redis("SET", "lock:reset", "1", "NX", "EX", 60))) return;
+  try {
+    const mk = await getJ("market");
+    for (const it of (mk ? mk.items : [])) await redis("DEL", "bids:" + it.pid);
+    await redis("DEL", "owner"); await redis("DEL", "market"); await redis("DEL", "prices");
+    await tick();
+    const users = (await redis("SMEMBERS", "users")) || [];
+    for (const u of users.sort(() => Math.random() - 0.5)) { const old = (await getJ("team:" + u)) || {}; const t = await newTeam(u); t.name = old.name || ""; await setJ("team:" + u, t); }
+    await redis("SET", "leaguever", String(LEAGUE_VER));
+    await log("info", "Liga reiniciada con los precios nuevos: todos tenéis 100 M y una plantilla nueva de unos 100 M.");
+  } finally { await redis("DEL", "lock:reset"); }
+}
+
 module.exports = async (req, res) => {
+  // fotos de los jugadores: /api/fantasy?foto=ID (se guardan en Redis como JPEG pequeño)
+  if (req.method === "GET" && req.query && req.query.foto) {
+    try { const d = await redis("HGET", "foto", String(req.query.foto)); if (!d) return res.status(404).end();
+      res.setHeader("Content-Type", "image/jpeg"); res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      return res.status(200).send(Buffer.from(String(d).split(",")[1] || "", "base64")); } catch (e) { return res.status(500).end(); }
+  }
   res.setHeader("Cache-Control", "no-store");
   const send = (code, obj) => res.status(code).json(obj);
   if (!URL_ || !TOKEN) return send(500, { error: "Falta conectar la base de datos: en Vercel ve a Storage > Upstash for Redis > Connect y vuelve a desplegar." });
@@ -152,7 +175,7 @@ module.exports = async (req, res) => {
         if (!ok) return send(409, { error: "Ese usuario ya existe. Prueba a entrar." });
         const first = (await redis("SADD", "users", name)) && (await redis("SCARD", "users")) === 1;
         if (first || norm(process.env.ADMIN_USER) === name) { const u = await getJ("user:" + name); u.admin = true; await setJ("user:" + name, u); }
-        await tick(); const t = await newTeam(name); await setJ("team:" + name, t);
+        await ensureLeague(); await tick(); const t = await newTeam(name); await setJ("team:" + name, t);
         await log("join", `${name} se ha unido a la liga`);
       } else {
         let u = await getJ("user:" + name);
@@ -175,7 +198,7 @@ module.exports = async (req, res) => {
     const me = await whoami(req);
     if (!me) return send(401, { error: "Sesión caducada. Vuelve a entrar." });
     const admin = me.admin || norm(process.env.ADMIN_USER) === me.name;
-    await tick();
+    await ensureLeague(); await tick();
     const myKey = "team:" + me.name;
     let mine = await getJ(myKey);
     if (!mine) { mine = await newTeam(me.name); await setJ(myKey, mine); }
@@ -183,7 +206,7 @@ module.exports = async (req, res) => {
 
     if (a === "state") {
       const users = (await redis("SMEMBERS", "users")) || [];
-      const [pr, market, points, logs, ownerArr] = await Promise.all([getPrices(), getJ("market"), hgetall("points"), redis("LRANGE", "log", 0, 149), redis("HGETALL", "owner")]);
+      const [pr, market, points, logs, ownerArr, fotos] = await Promise.all([getPrices(), getJ("market"), hgetall("points"), redis("LRANGE", "log", 0, 149), redis("HGETALL", "owner"), hgetall("fotov")]);
       const owner = {}; for (let i = 0; i < (ownerArr || []).length; i += 2) owner[ownerArr[i]] = ownerArr[i + 1];
       const teams = {};
       for (const u of users) { const t = u === me.name ? mine : await getJ("team:" + u); if (!t) continue;
@@ -191,7 +214,7 @@ module.exports = async (req, res) => {
       const myBids = {}; for (const it of (market ? market.items : [])) { const v = await redis("HGET", "bids:" + it.pid, me.name); if (v) myBids[it.pid] = JSON.parse(v).amount; }
       const imported = {}; Object.values(J).filter(j => j.n >= G.FIRST_J).forEach(j => imported[j.n] = j);
       return send(200, { me: me.name, admin, now: Date.now(), team: mine, teams, owner, prices: { v: pr.v, prev: pr.prev, h: pr.h }, market: market ? market.items : [],
-        myBids, points, log: (logs || []).map(x => JSON.parse(x)), jornadas: imported, current: { ...cur, locked: !!locked }, pos: POSO });
+        myBids, points, log: (logs || []).map(x => JSON.parse(x)), jornadas: imported, current: { ...cur, locked: !!locked }, pos: POSO, fotos });
     }
     if (a === "teamName") { mine.name = String(b.name || "").trim().slice(0, 28); await setJ(myKey, mine); return send(200, { ok: true }); }
     if (a === "daily") {
@@ -258,6 +281,13 @@ module.exports = async (req, res) => {
       for (const [t, x] of logs) await log(t, x);
       await log("jornada", `Puntos de la jornada ${n} publicados.`);
       return send(200, { ok: true, points: pts });
+    }
+    if (a === "foto") {   // cualquiera de la liga puede poner o quitar la foto de un jugador
+      if (!PL[b.pid]) return send(400, { error: "Jugador desconocido." });
+      if (b.img == null) { await redis("HDEL", "foto", b.pid); await redis("HDEL", "fotov", b.pid); return send(200, { ok: true }); }
+      const img = String(b.img); if (!/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(img) || img.length > 80000) return send(400, { error: "La foto no es válida o pesa demasiado." });
+      await redis("HSET", "foto", b.pid, img); await redis("HSET", "fotov", b.pid, String(Date.now()));
+      await log("info", `${me.name} ha puesto la foto de ${PL[b.pid].n}`); return send(200, { ok: true });
     }
     if (a === "logout") { await redis("DEL", "sess:" + (req.headers.authorization || "").replace(/^Bearer\s+/i, "")); return send(200, { ok: true }); }
     return send(400, { error: "Acción desconocida." });
