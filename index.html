@@ -81,6 +81,7 @@ select.form{background:var(--card);color:var(--fg);border:0;padding:10px 12px;fo
 .slot .cap{position:absolute;top:2px;right:3px}
 .slot .cap svg{width:18px;height:14px;fill:var(--yellow)}
 .shirt{width:82%;height:auto}
+.shirt.foto{aspect-ratio:1/1;object-fit:cover;border-radius:50%;border:2px solid #3a3d4a;background:#181a21}
 .shirt text{font-weight:800;font-family:inherit}
 .pos{display:inline-block;font-size:12px;font-weight:800;padding:3px 6px;color:#fff;letter-spacing:.02em}
 .pos.POR{background:var(--por)} .pos.DEF{background:var(--def)} .pos.CEN{background:var(--cen)} .pos.DEL{background:var(--del)}
@@ -253,7 +254,9 @@ const posOf = id => (S.st && S.st.pos && S.st.pos[id]) || (PMAP[id] || {}).pos |
 const team = t => (S.liga.teams[t] || { short: "?" });
 const hue = t => (t * 47 + 8) % 360;
 const MY_T = 0;   // Almazora C
+const FOTOS = new Set();   // jugadores con foto en /fotos/<id>.jpg (lista en /fotos.json)
 function shirt(p, size) {
+  if (p && FOTOS.has(p.id)) return `<img class="shirt foto" alt="" loading="lazy" src="/fotos/${encodeURIComponent(p.id)}.jpg" style="width:${size || 82}%">`;
   const t = p ? p.t : -1, c = t === MY_T ? "#111" : t >= 0 ? `hsl(${hue(t)} 55% 45%)` : "#3c404d", c2 = t === MY_T ? "#fff" : t >= 0 ? `hsl(${hue(t)} 60% 30%)` : "#2a2c35";
   const stripes = t === MY_T ? '<path d="M38 20h6v70h-6zM50 18h6v72h-6zM62 20h6v70h-6z" fill="#fff" opacity=".9"/>' : "";
   return `<svg class="shirt" viewBox="0 0 100 100" style="width:${size || 82}%"><path d="M30 10l-22 14 9 18 9-5v55h48V37l9 5 9-18-22-14c-3 7-10 11-20 11s-17-4-20-11z" fill="${c}"/>${stripes}<path d="M30 10c3 7 10 11 20 11s17-4 20-11" fill="none" stroke="${c2}" stroke-width="4"/>
@@ -290,6 +293,7 @@ async function act(action, body, okMsg) {
   catch (e) { toast(e.message); return false; }
 }
 async function boot() {
+  fetch("/fotos.json").then(r => r.ok ? r.json() : []).then(a => { a.forEach(id => FOTOS.add(String(id))); if (S.store === "ok") render(); }).catch(() => {});
   try { const r = await fetch("/liga.json"); S.liga = await r.json(); S.liga.players.forEach(p => PMAP[p.id] = p); }
   catch (e) { document.getElementById("main").innerHTML = '<div class="empty">No se han podido cargar los datos de la liga.</div>'; return; }
   if (!tok()) { S.store = "auth"; return render(); }
