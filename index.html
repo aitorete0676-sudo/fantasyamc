@@ -81,7 +81,10 @@ select.form{background:var(--card);color:var(--fg);border:0;padding:10px 12px;fo
 .slot .cap{position:absolute;top:2px;right:3px}
 .slot .cap svg{width:18px;height:14px;fill:var(--yellow)}
 .shirt{width:82%;height:auto}
-.shirt.foto{aspect-ratio:1/1;object-fit:cover;border-radius:50%;border:2px solid #3a3d4a;background:#181a21}
+.shirt.foto{position:absolute;inset:0;width:100%!important;height:100%;object-fit:cover;object-position:center top;background:#181a21}
+.fhead .av{position:relative} .fhead .av:has(.foto){aspect-ratio:3/4;padding:0}
+.pcard .ph:has(.foto) .tm{background:rgba(0,0,0,.6);color:#fff;bottom:0;padding:3px 4px}
+.slot .face .cap{z-index:2}
 .shirt text{font-weight:800;font-family:inherit}
 .pos{display:inline-block;font-size:12px;font-weight:800;padding:3px 6px;color:#fff;letter-spacing:.02em}
 .pos.POR{background:var(--por)} .pos.DEF{background:var(--def)} .pos.CEN{background:var(--cen)} .pos.DEL{background:var(--del)}
