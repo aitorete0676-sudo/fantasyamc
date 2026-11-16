@@ -82,7 +82,6 @@ select.form{background:var(--card);color:var(--fg);border:0;padding:10px 12px;fo
 .slot .cap svg{width:18px;height:14px;fill:var(--yellow)}
 .shirt{width:82%;height:auto}
 .shirt.foto{position:absolute;inset:0;width:100%!important;height:100%;object-fit:cover;object-position:center top;background:#181a21}
-.fhead .av{position:relative} .fhead .av:has(.foto){aspect-ratio:3/4;padding:0}
 .pcard .ph:has(.foto) .tm{background:rgba(0,0,0,.6);color:#fff;bottom:0;padding:3px 4px}
 .slot .face .cap{z-index:2}
 .shirt text{font-weight:800;font-family:inherit}
@@ -159,33 +158,46 @@ nav.bn svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:1.6
 .note{font-size:13px;color:var(--muted);margin:6px 2px 12px}
 .timer{display:flex;gap:8px;align-items:center;font-variant-numeric:tabular-nums}
 /* ficha */
-.fhead{display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;align-items:center;margin-bottom:12px}
-.fhead .av{background:#181a21;display:grid;place-items:center;padding:8px 0}
-.fhead h2{margin:4px 0 2px;font-size:22px}
-.fhead .sub{color:var(--muted);font-size:14px}
-.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);margin-bottom:12px}
-.kpis div{background:var(--card);padding:10px 8px;text-align:center}
-.kpis small{display:block;font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase}
-.kpis b{font-size:17px;font-variant-numeric:tabular-nums}
+.fx{margin:-16px -14px 0}
+.fx .fh{display:grid;grid-template-columns:116px minmax(0,1fr);background:var(--card)}
+.fx .fh .av{position:relative;background:#181a21;min-height:150px;display:grid;place-items:center;overflow:hidden}
+.fx .fh .av .shirt:not(.foto){width:80%}
+.fx .fh .av .tmb{position:absolute;top:6px;right:6px;width:22px;z-index:2}
+.fx .fh .bd{padding:12px 12px 12px 14px;display:grid;gap:8px;min-width:0}
+.fx .r1{display:flex;align-items:center;gap:8px;min-width:0}
+.fx .r1 h2{margin:0;font-size:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+.fx .pf{color:var(--muted);font-weight:700;font-size:13px;white-space:nowrap} .fx .pf b{color:var(--fg);font-size:28px;margin-left:4px;vertical-align:-3px}
+.fx .r2{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:15px}
+.fx .r2 span{display:flex;align-items:center;gap:8px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fx .r2 .md{color:var(--muted);font-weight:700} .fx .r2 .md b{color:var(--fg);margin-left:4px}
+.fx .bt{display:grid;grid-template-columns:1fr auto;gap:10px;margin-top:2px}
+.fx .bt .ol{border:2px solid #d5d8e0;color:#d5d8e0;padding:8px 6px;font-weight:700;font-size:16px;text-align:center}
+.fx .bt .abtn{padding:8px 14px;font-size:16px}
+.fx .hist{background:var(--card);padding:10px 14px;border-top:1px solid var(--line)}
+.fx .hist .spark{margin:6px 0 0;padding:0;background:none}
 .spark{display:flex;gap:2px;align-items:flex-end;height:46px;background:var(--card);padding:8px;margin-bottom:12px}
 .spark i{flex:1;background:#5d6170;display:block;min-height:3px}
 .spark i.u{background:var(--ok)} .spark i.d{background:var(--bad)}
-.jstrip{position:relative;display:flex;gap:6px;overflow-x:auto;padding:4px 0 10px;scrollbar-width:none}
-.jbox{flex:0 0 52px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 0 0;text-align:center;overflow:hidden}
-.jbox small{display:block;font-size:11px;color:var(--muted);font-weight:700}
-.jbox b{display:block;font-size:18px;font-variant-numeric:tabular-nums;padding:2px 0 4px}
-.jbox i{display:block;height:4px;background:#5d6170}
-.jbox i.p{background:#2fb36b} .jbox i.z{background:#7bc96f} .jbox i.y{background:#e6b93c} .jbox i.n{background:var(--bad)}
-.jbox.on{border-color:var(--accent);background:#2b1f22} .jbox.on small{color:var(--accent)}
-.jtitle{display:flex;justify-content:space-between;align-items:baseline;padding:8px 2px}
-.jtitle b{font-size:17px} .jtitle span{color:var(--muted);font-size:13px}
-.stbl{width:100%;border-collapse:collapse;background:var(--card);font-size:14px}
-.stbl th{font-size:11px;text-transform:uppercase;color:var(--muted);font-weight:700;padding:8px;text-align:left}
-.stbl th:first-child,.stbl td:first-child{text-align:center;width:72px} .stbl th:last-child,.stbl td:last-child{text-align:right;width:60px}
-.stbl td{padding:8px;border-top:1px solid var(--line)} .stbl td:last-child{font-weight:800}
-.stbl tr.zero td{color:var(--muted)}
-.jtotal{display:flex;justify-content:space-between;align-items:center;background:var(--accent);color:#fff;padding:12px;font-weight:800;margin-top:2px}
-.jtotal b{font-size:20px}
+.jstrip{position:relative;display:flex;overflow-x:auto;padding:18px 8px 22px;scrollbar-width:none;background:#0d0e12}
+.jstrip::-webkit-scrollbar{display:none}
+.jbox{flex:0 0 calc((100% - 0px) / 6);min-width:56px;padding:0 6px;text-align:center;display:flex;flex-direction:column;align-items:stretch}
+.jbox small{display:block;font-size:13px;font-weight:800;color:var(--fg);margin-bottom:6px}
+.jbox b{display:block;font-size:30px;line-height:1;font-variant-numeric:tabular-nums;padding:6px 0 4px}
+.jbox i{display:block;height:6px;background:#5d6170}
+.jbox i.p{background:#4caf3e} .jbox i.y{background:#f5d547} .jbox i.n{background:var(--bad)}
+.jbox.on{background:var(--top);border:2px solid #f3d9a4;border-radius:4px;padding:6px 0 0;margin:-8px 4px 0}
+.jbox.on b{flex:1;padding:4px 0}
+.jbox.on i{height:44%;min-height:28px}
+.jtitle{text-align:center;background:var(--card);padding:16px 8px;font-size:20px;font-weight:800;border-bottom:3px solid #0d0e12}
+.jtitle small{display:block;font-size:13px;color:var(--muted);font-weight:600;margin-top:2px}
+.stbl{width:100%;border-collapse:collapse;background:var(--card);font-size:17px;table-layout:fixed}
+.stbl th{font-size:15px;color:var(--muted);font-weight:500;padding:14px 6px;text-align:center;border-bottom:3px solid #0d0e12}
+.stbl th:first-child,.stbl td:first-child{width:26%} .stbl th:last-child,.stbl td:last-child{width:26%}
+.stbl td{padding:16px 6px;text-align:center;border-top:3px solid #0d0e12;font-weight:600}
+.stbl td.up{color:#4caf3e} .stbl td.yl{color:var(--yellow)} .stbl td.dn{color:var(--bad)}
+.jtotal{position:sticky;bottom:calc(-16px - env(safe-area-inset-bottom,0px));display:flex;justify-content:space-between;align-items:center;background:var(--accent);color:#14151b;padding:16px 14px calc(16px + env(safe-area-inset-bottom,0px));font-weight:800;font-size:18px;z-index:3}
+.jtotal b{font-size:20px;margin-right:12%}
+.fx .adm{padding:12px 14px;background:var(--card);margin-top:3px;display:flex;align-items:center;gap:10px;color:var(--muted);font-size:14px}
 .jrow{display:grid;grid-template-columns:34px minmax(0,1fr) 44px 38px;gap:6px;align-items:center;padding:10px 8px;border-top:1px solid var(--line);width:100%;text-align:left;font-size:14px}
 .jrow .r{text-align:center;font-weight:700}
 .jrow .pt{text-align:right;font-weight:800;font-size:17px}
@@ -539,27 +551,31 @@ function parseActas(files) {
 
 /* ---- hojas: ficha, selección, pujas, acciones, buscador ---- */
 function fichaView(id) {
-  const p = PL(id), se = seasonOf(id), h = (S.st.prices.h[id] || []).slice(-14), mx = Math.max(...h), mn = Math.min(...h), own = ownerOf(id), inMk = S.st.market.find(i => i.pid === id);
+  const p = PL(id), se = seasonOf(id), h = (S.st.prices.h[id] || []).slice(-30), mx = Math.max(...h), mn = Math.min(...h), own = ownerOf(id), inMk = S.st.market.find(i => i.pid === id);
+  const mine = S.st.team.squad.includes(id), vv = val(id), prev = S.st.prices.prev[id] || vv, dv = vv - prev;
   const bars = h.map((x, i) => `<i class="${i && x > h[i - 1] ? "u" : i && x < h[i - 1] ? "d" : ""}" style="height:${mx === mn ? 50 : 15 + 85 * (x - mn) / (mx - mn)}%"></i>`).join("");
   const js = allJ(), sel = js.find(J => J.n === S.fj[id]) || js[js.length - 1];
   const strip = js.map(J => { const m = GAME.mins(J, id), pt = ptsOf(id, J);
-    return `<button class="jbox ${J === sel ? "on" : ""}" data-fj="${id}:${J.n}"><small>J${J.n}</small><b>${m > 0 || pt ? pt : "–"}</b><i class="${!(m > 0) ? "x" : pt >= 10 ? "p" : pt > 3 ? "z" : pt >= 0 ? "y" : "n"}"></i></button>`; }).join("");
+    return `<button class="jbox ${J === sel ? "on" : ""}" data-fj="${id}:${J.n}"><small>J${J.n}</small><b>${m > 0 || pt ? pt : "–"}</b><i class="${!(m > 0) && !pt ? "x" : pt > 0 ? "p" : pt === 0 ? "y" : "n"}"></i></button>`; }).join("");
+  const status = own ? (own === S.st.me ? "En tu equipo" : "De " + teamName(own)) : inMk ? "En el mercado" : "Libre (LIGA)";
+  const btn = inMk && inMk.seller !== S.st.me ? `<button class="abtn" data-bid="${id}">${S.st.myBids[id] ? "Puja: " + eur(S.st.myBids[id]) : "Pujar"}</button>`
+    : mine ? `<button class="abtn" data-acts="${id}">Acciones</button>` : "";
   let det = "";
   if (sel) {
     const b = GAME.breakdown(posOf(id), sel, id), res = GAME.teamResult(sel, b ? b.t : p.t);
-    const vs = res ? `${res.local ? team(p.t).short + " " + res.gf + "-" + res.gc + " " + team(res.rival).short : team(res.rival).short + " " + res.gc + "-" + res.gf + " " + team(p.t).short}` : "Sin partido";
-    det = `<div class="jtitle"><b>Jornada ${sel.n}</b><span>${esc(vs)}</span></div>` + (b ? `<table class="stbl"><tr><th>Cantidad</th><th>Estadísticas</th><th>Puntos</th></tr>
-      ${b.rows.map(([t, q, v]) => `<tr class="${v ? "" : "zero"}"><td>${esc(String(q))}</td><td>${esc(t)}</td><td class="${v < 0 ? "dn" : v > 0 ? "up" : ""}">${v > 0 ? "+" : ""}${v}</td></tr>`).join("")}</table>
+    const vs = res ? (res.local ? `${team(p.t).short} ${res.gf}-${res.gc} ${team(res.rival).short}` : `${team(res.rival).short} ${res.gc}-${res.gf} ${team(p.t).short}`) : "Sin partido";
+    det = `<div class="jtitle">Jornada ${sel.n}<small>${esc(vs)}</small></div>` + (b ? `<table class="stbl"><tr><th>Cantidad</th><th>Estadísticas</th><th>Puntos</th></tr>
+      ${b.rows.map(([t, q, v]) => `<tr><td>${esc(String(q))}</td><td>${esc(t)}</td><td class="${v > 0 ? "up" : v < 0 ? "dn" : "yl"}">${v}</td></tr>`).join("")}</table>
       <div class="jtotal"><span>TOTAL JORNADA ${sel.n}</span><b>${b.total}</b></div>` : '<div class="empty">No fue convocado en esta jornada.</div>');
   }
-  const mine = S.st.team.squad.includes(id), vv = val(id);
-  return `<div class="fhead"><div class="av">${shirt(p, 80)}</div><div><span class="pos ${posOf(id)}">${posOf(id)}</span><h2>${esc(p.n)}</h2><div class="sub">${esc(p.full)} · ${esc(team(p.t).short)}</div>
-      <div class="sub">${own ? "Propietario: " + esc(teamName(own)) + (own === S.st.me ? " (tú)" : "") : "Libre (LIGA)"}${inMk ? " · En el mercado" : ""}</div></div></div>
-    <div class="kpis"><div><small>PFSY</small><b>${se.pf}</b></div><div><small>Media</small><b>${se.media.toFixed(2).replace(".", ",")}</b></div><div><small>Partidos</small><b>${se.apps}</b></div><div><small>Valor</small><b>${vv >= 1e6 ? (vv / 1e6).toFixed(1).replace(".", ",") + " M" : eur(vv)}</b></div></div>
-    <div class="note">Valor histórico (últimos ${h.length} días): ${eur(vv)} €</div><div class="spark">${bars}</div>
-    <div class="row2">${inMk && inMk.seller !== S.st.me ? `<button class="abtn" data-bid="${id}">${S.st.myBids[id] ? "Cambiar puja (" + eur(S.st.myBids[id]) + ")" : "Pujar"}</button>` : ""}${mine ? `<button class="abtn" data-acts="${id}">Acciones</button>` : ""}
-      ${S.st.admin ? `<select class="form" id="setpos" data-pid="${id}" aria-label="Posición">${["POR", "DEF", "CEN", "DEL"].map(x => `<option ${x === posOf(id) ? "selected" : ""}>${x}</option>`).join("")}</select>` : ""}</div>
-    <div class="jstrip">${strip}</div>${det}`;
+  return `<div class="fx"><div class="fh"><div class="av">${shirt(p, 80)}${FOTOS.has(p.id) ? `<span class="tmb">${shirt({ id: "", t: p.t, d: "" }, 100)}</span>` : ""}</div>
+      <div class="bd"><div class="r1"><span class="pos ${posOf(id)}">${posOf(id)}</span><h2>${esc(p.n)}</h2><span class="pf">PFSY<b>${se.pf}</b></span></div>
+        <div class="r2"><span><span class="ck">${CHK}</span>${esc(status)}</span><span class="md">MEDIA:<b>${se.media.toFixed(1).replace(".", ",")}</b></span></div>
+        <div class="r2"><span><span class="coin">€</span>${eur(vv)}</span><span class="${dv > 0 ? "up" : dv < 0 ? "dn" : ""}" style="font-size:13px">${dv ? (dv > 0 ? "▲ +" : "▼ ") + eur(dv) : esc(team(p.t).short)}</span></div>
+        <div class="bt"><button class="ol" data-hist="${id}">Valor histórico</button>${btn}</div></div></div>
+    ${S.hist === id ? `<div class="hist"><div class="note" style="margin:0">Valor de los últimos ${h.length} días · ${esc(p.full)}</div><div class="spark">${bars}</div></div>` : ""}
+    <div class="jstrip">${strip}</div>${det}
+    ${S.st.admin ? `<div class="adm">Posición (admin) <select class="form" id="setpos" data-pid="${id}" aria-label="Posición">${["POR", "DEF", "CEN", "DEL"].map(x => `<option ${x === posOf(id) ? "selected" : ""}>${x}</option>`).join("")}</select></div>` : ""}</div>`;
 }
 function renderSheet() {
   const el = document.getElementById("sheet"), sh = S.sheet; if (!sh || S.store !== "ok") { el.innerHTML = ""; return; }
@@ -612,6 +628,7 @@ document.addEventListener("click", async e => {
   if (d.lg) { setLg(d.lg); S.view = "team"; S.sheet = null; S.imp = null; scrollTo(0, 0); return refresh(); }
   if (d.share) { const txt = `Únete a mi liga del fantasy del Almazora C con el código ${d.share}: ${location.origin}`;
     if (navigator.share) navigator.share({ text: txt }).catch(() => {}); else navigator.clipboard.writeText(txt).then(() => toast("Código copiado"), () => toast(d.share)); return; }
+  if (d.hist) { S.hist = S.hist === d.hist ? null : d.hist; S.sheet.keep = true; renderSheet(); S.sheet.keep = false; return; }
   if (d.fj) { const [pid, n] = d.fj.split(":"); S.fj[pid] = +n; S.sheet.keep = true; renderSheet(); S.sheet.keep = false; return; }
   if (d.bid) { S.sheet = { t: "bid", id: d.bid }; return renderSheet(); }
   if (d.acts) { S.sheet = { t: "acts", id: d.acts }; return renderSheet(); }
