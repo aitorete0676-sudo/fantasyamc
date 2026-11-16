@@ -150,7 +150,18 @@ module.exports = async (req, res) => {
         await tick(); const t = await newTeam(name); await setJ("team:" + name, t);
         await log("join", `${name} se ha unido a la liga`);
       } else {
-        const u = await getJ("user:" + name);
+        let u = await getJ("user:" + name);
+        if (!u) {   // cuenta de la primera versión (prefijo "fa:"): se pasa a la nueva con la misma contraseña
+          const raw = await fetch(URL_, { method: "POST", headers: { Authorization: "Bearer " + TOKEN, "Content-Type": "application/json" }, body: JSON.stringify(["GET", "fa:user:" + name]) }).then(r => r.json()).catch(() => ({}));
+          const old = raw && raw.result ? JSON.parse(raw.result) : null;
+          if (old && hash(pw, old.salt) === old.hash) {
+            u = { salt: old.salt, hash: old.hash, admin: false, created: Date.now() };
+            await redis("SET", "user:" + name, JSON.stringify(u), "NX");
+            const first = (await redis("SADD", "users", name)) && (await redis("SCARD", "users")) === 1;
+            if (first || norm(process.env.ADMIN_USER) === name) { u.admin = true; await setJ("user:" + name, u); }
+            await tick(); await setJ("team:" + name, await newTeam(name)); await log("join", `${name} se ha unido a la liga`);
+          }
+        }
         if (!u || hash(pw, u.salt) !== u.hash) return send(401, { error: "Usuario o contraseña incorrectos." });
       }
       return send(200, { token: await newSession(name) });
