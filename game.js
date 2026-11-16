@@ -118,6 +118,13 @@
     const g = k => +parts.find(p => p.type === k).value, asMadrid = Date.UTC(g("year"), g("month") - 1, g("day"), g("hour") % 24, g("minute"));
     return guess - (asMadrid - guess);
   }
+  // Hora "HH:MM" de Madrid de un instante, y siguiente vez que en Madrid sean las "HH:MM" (cierre de mercado de cada liga)
+  const madridHM = t => new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Madrid", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(t)).replace(/^24/, "00");
+  function nextClose(t, hm) {
+    hm = /^\d\d:\d\d$/.test(hm || "") ? hm : "00:00";
+    let c = madridTs(day(t) + "T" + hm); if (c > t) return c;
+    return madridTs(day(c + 24 * 3600e3) + "T" + hm);
+  }
   // Alineación vigente para la jornada n: la última guardada en esa jornada o antes
   function lineupFor(team, n) {
     const L = (team && team.lineups) || {}; let k = null;
@@ -132,5 +139,5 @@
     let total = 0; ids.forEach(id => { total += points(posOf(id), J, id) * (id === l.c ? 2 : 1); });
     return { total, l };
   }
-  return Object.assign(R, { PRICE_VER, mins, parseActa, rows, madridTs, teamResult, breakdown, points, baseValue, day, nextMidnight, lineupFor, teamPoints });
+  return Object.assign(R, { madridHM, nextClose, PRICE_VER, mins, parseActa, rows, madridTs, teamResult, breakdown, points, baseValue, day, nextMidnight, lineupFor, teamPoints });
 });

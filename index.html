@@ -421,15 +421,22 @@ function ptsView() {
 function marketView() {
   const pos = S.mpos, items = S.st.market.filter(i => PL(i.pid) && (pos === "ALL" || posOf(i.pid) === pos)).sort((a, b) => (a.seller === "LIGA") - (b.seller === "LIGA") || val(b.pid) - val(a.pid));
   return rewardBox() + `<div class="chips">${[["ALL", "Todos"], ["POR", "Porteros"], ["DEF", "Defensas"], ["CEN", "Medios"], ["DEL", "Delanteros"]].map(([k, l]) => `<button data-mpos="${k}" class="${pos === k ? "on" : ""}">${l}</button>`).join("")}</div>` +
-    `<div class="note">Pujas a ciegas: nadie ve lo que pujan los demás. A las 00:00 gana la puja más alta y sale mercado nuevo.</div>` +
+    `<div class="note">Pujas a ciegas: nadie ve lo que pujan los demás. A las ${esc(S.st.close)} gana la puja más alta y sale mercado nuevo.</div>` +
     (items.length ? items.map(i => pcard(i.pid, "market", i)).join("") : '<div class="empty">No hay jugadores en el mercado.</div>');
+}
+// Oferta de LIGA por un jugador mío que está a la venta (cambia cada día y ronda su valor)
+function offerBtn(id, confirm) {
+  const it = S.st.market.find(i => i.pid === id && i.seller === S.st.me); if (!it || !it.offer) return "";
+  const d = it.offer - val(id), tag = d > 0 ? `<span class="up">+${eur(d)} sobre su valor</span>` : d < 0 ? `<span class="dn">${eur(d)} bajo su valor</span>` : "igual a su valor";
+  return confirm ? `<button class="opt red" data-act="offerok" data-pid="${id}"><b>Confirmar: vender a LIGA por ${eur(it.offer)} €</b></button>`
+    : `<button class="opt" data-act="offerask" data-pid="${id}"><b>Oferta de LIGA: ${eur(it.offer)} €</b><span>${tag} · cambia cada día a las ${esc(S.st.close)}</span></button>`;
 }
 function opsView() {
   const bids = Object.entries(S.st.myBids || {}), lists = S.st.market.filter(i => i.seller === S.st.me);
   const mine = new RegExp("^(" + [S.st.me, S.st.team.name].filter(Boolean).map(x => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ") ha");
   const hist = S.st.log.filter(x => x.type === "market" && mine.test(x.text));
   return `<div class="box"><h3>Mis pujas</h3>${bids.length ? `<table>${bids.map(([id, a]) => `<tr><td><button data-ficha="${id}">${esc(PL(id).n)}</button></td><td><button class="gbtn" data-bid="${id}">${eur(a)} €</button></td></tr>`).join("")}</table>` : "<p>No tienes pujas activas.</p>"}</div>
-    <div class="box"><h3>En venta</h3>${lists.length ? `<table>${lists.map(i => `<tr><td>${esc(PL(i.pid).n)}</td><td>desde ${eur(i.price)} €</td></tr>`).join("")}</table>` : "<p>No tienes jugadores en el mercado.</p>"}</div>
+    <div class="box"><h3>En venta</h3>${lists.length ? `<table>${lists.map(i => `<tr><td><button data-ficha="${i.pid}">${esc(PL(i.pid).n)}</button><br><small class="note">desde ${eur(i.price)} €</small></td><td>${i.offer ? `<button class="gbtn" data-acts="${i.pid}">LIGA ofrece ${eur(i.offer)} €</button>` : ""}</td></tr>`).join("")}</table>` : "<p>No tienes jugadores en el mercado.</p>"}</div>
     ${hist.map(x => `<div class="act"><div class="h"><b>Operación</b><span>${fmtD(x.at)}</span></div><p>${esc(x.text)}</p></div>`).join("")}`;
 }
 function histView() {
@@ -459,9 +466,9 @@ function activityView() {
 function leaguesView(first) {
   const L = S.st.leagues || [], cl = L.find(l => l.code === S.st.lg);
   return (first ? `<div class="box"><h3>Entra en una liga</h3><p>Crea tu liga y pasa el código a tus amigos, o únete a la de alguien con su código. En cada liga empiezas con ${eur(GAME.START_MONEY)} € y una plantilla de unos ${eur(GAME.START_VALUE)} €.</p></div>` : "") +
-    (cl ? `<div class="box"><h3>${esc(cl.name)}</h3><p>Código para invitar a tus amigos:</p><div class="row2" style="align-items:center"><span class="code">${esc(cl.code)}</span><button class="gbtn" data-share="${esc(cl.code)}">Compartir</button></div>
+    (cl ? `<div class="box"><h3>${esc(cl.name)}</h3><p>El mercado cierra cada día a las <b>${esc(cl.hm || "00:00")}</b>. Código para invitar a tus amigos:</p><div class="row2" style="align-items:center"><span class="code">${esc(cl.code)}</span><button class="gbtn" data-share="${esc(cl.code)}">Compartir</button></div>
       <p class="note">Cada liga tiene sus propias plantillas, mercado y clasificación. Los puntos y los precios de los jugadores son los mismos en todas.</p></div>` : "") +
-    (L.length > 1 ? `<div class="box"><h3>Mis ligas</h3>${L.map(l => `<button class="lgrow ${l.code === S.st.lg ? "on" : ""}" data-lg="${esc(l.code)}"><span><b>${esc(l.name)}</b><small>${esc(l.code)}${l.admin === S.st.me ? " · la creaste tú" : ""}</small></span><span>${l.code === S.st.lg ? "Estás aquí" : "Entrar ›"}</span></button>`).join("")}</div>` : "") +
+    (L.length > 1 ? `<div class="box"><h3>Mis ligas</h3>${L.map(l => `<button class="lgrow ${l.code === S.st.lg ? "on" : ""}" data-lg="${esc(l.code)}"><span><b>${esc(l.name)}</b><small>${esc(l.code)} · mercado a las ${esc(l.hm || "00:00")}${l.admin === S.st.me ? " · la creaste tú" : ""}</small></span><span>${l.code === S.st.lg ? "Estás aquí" : "Entrar ›"}</span></button>`).join("")}</div>` : "") +
     `<div class="box"><h3>Unirse a una liga</h3><div class="row2"><input id="lgcode" class="inp" maxlength="8" placeholder="Código, p. ej. K7M2QX" autocapitalize="characters" style="flex:1;text-transform:uppercase"><button class="abtn" data-act="joinlg">Unirme</button></div></div>
     <div class="box"><h3>Crear una liga nueva</h3><div class="row2"><input id="lgnew" class="inp" maxlength="30" placeholder="Nombre, p. ej. Los de clase" style="flex:1"><button class="abtn" data-act="newlg">Crear</button></div></div>` +
     (first ? `<div class="box"><p>Has entrado como <b>${esc(S.st.me)}</b>.</p><button class="gbtn" data-act="logout">Cerrar sesión</button></div>` : "");
@@ -471,9 +478,9 @@ function leaguesView(first) {
 function rulesView() {
   return `<div class="box"><h3>Cómo se juega</h3><p>Todos empezáis con ${eur(GAME.START_MONEY)} € y una plantilla aleatoria de ${Object.values(GAME.START_SQUAD).reduce((a, b) => a + b)} jugadores que vale unos ${eur(GAME.START_VALUE)} €. Entran los jugadores de los 16 equipos de la Tercera FFCV Grupo 2 y, dentro de cada liga, cada uno solo puede tener un dueño.</p>
     <p>Alinea 11 antes del primer partido de cada jornada. Con menos de 11 no puntúas. El capitán puntúa doble. Cada punto te da ${eur(GAME.PER_POINT)} €. Recompensa diaria: ${eur(GAME.DAILY)} €. Máximo ${GAME.MAX_SQUAD} jugadores.</p></div>
-    <div class="box"><h3>Mercado</h3><ul><li>Cada día a las 00:00 salen ${GAME.MARKET_SIZE} jugadores libres de LIGA. Puedes poner los tuyos también.</li>
-    <li>Las pujas son a ciegas y duran hasta las 00:00. Gana la más alta (si empatan, la primera). No se puede pujar por menos del valor del jugador.</li>
-    <li>La suma de tus pujas no puede pasar de tu saldo.</li><li>Puedes vender a LIGA al momento por su valor.</li></ul></div>
+    <div class="box"><h3>Mercado</h3><ul><li>El mercado de esta liga cierra cada día a las <b>${esc(S.st.close)}</b> (la hora a la que se creó la liga). A esa hora los fichajes pasan a sus equipos y salen ${GAME.MARKET_SIZE} jugadores libres de LIGA. Puedes poner los tuyos también.</li>
+    <li>Las pujas son a ciegas y duran hasta el cierre. Gana la más alta (si empatan, la primera). No se puede pujar por menos del valor del jugador.</li>
+    <li>La suma de tus pujas no puede pasar de tu saldo.</li><li>Si pones un jugador a la venta, LIGA te hace cada día una oferta que ronda su valor (entre −7 % y +7 %). Puedes aceptarla cuando quieras. Si al cierre nadie ha pujado, sigue a la venta con una oferta nueva.</li></ul></div>
     <div class="box"><h3>Puntos (según el acta)</h3><table>
     <tr><td>Minutos: 1–29' / 30–59' / 60–89' / 90'</td><td>+1 / +2 / +3 / +4</td></tr>
     <tr><td>Titular</td><td>+1</td></tr>
@@ -557,14 +564,14 @@ function renderSheet() {
       ${cur_ ? `<button class="opt" data-ficha="${cur_}"><b>Ver ficha de ${esc(PL(cur_).n)}</b></button><button class="opt red" data-pick=""><b>Quitar de la alineación</b></button>` : ""}`;
   } else if (sh.t === "bid") {
     const it = S.st.market.find(i => i.pid === sh.id), my = S.st.myBids[sh.id], mn = it ? Math.max(it.price, val(sh.id)) : 0;
-    body = it ? `<h3>Pujar por ${esc(PL(sh.id).n)}</h3><p class="note">Valor ${eur(val(sh.id))} €. Puja mínima ${eur(mn)} €: no se puede pujar por menos de su valor. Se resuelve a las 00:00. Saldo: ${eur(S.st.team.money)} €.</p>
+    body = it ? `<h3>Pujar por ${esc(PL(sh.id).n)}</h3><p class="note">Valor ${eur(val(sh.id))} €. Puja mínima ${eur(mn)} €: no se puede pujar por menos de su valor. Se resuelve a las ${esc(S.st.close)}. Saldo: ${eur(S.st.team.money)} €.</p>
       <div class="fld"><label for="bidv">Tu puja (€)</label><input id="bidv" class="inp" type="number" inputmode="numeric" min="${mn}" step="10000" value="${Math.max(my || 0, mn)}"></div>
       <div class="row2"><button class="abtn" data-act="dobid">${my ? "Cambiar puja" : "Pujar"}</button>${my ? `<button class="gbtn" data-act="nobid">Retirar puja</button>` : ""}<button class="gbtn" data-ficha="${sh.id}">Ver ficha</button></div>` : "<p>Ya no está en el mercado.</p>";
   } else if (sh.t === "acts") {
     const id = sh.id, listed = S.st.market.some(i => i.pid === id && i.seller === S.st.me);
     body = `<h3>${esc(PL(id).n)}</h3><button class="opt" data-ficha="${id}"><b>Ver ficha</b></button>
-      ${listed ? `<button class="opt" data-unlist="${id}"><b>Quitar del mercado</b></button>` : `<button class="opt" data-act="listask"><b>Poner en el mercado</b><span>pujas hasta las 00:00</span></button>`}
-      ${sh.confirm ? `<button class="opt red" data-act="sellok"><b>Confirmar: vender a LIGA por ${eur(val(id))} €</b></button>` : `<button class="opt red" data-act="sellask"><b>Vender a LIGA ya</b><span>${eur(val(id))} €</span></button>`}
+      ${listed ? `<button class="opt" data-unlist="${id}"><b>Quitar del mercado</b></button>` : `<button class="opt" data-act="listask"><b>Poner en el mercado</b><span>pujan los demás y LIGA te hace una oferta cada día</span></button>`}
+      ${offerBtn(id, sh.confirm)}
       ${sh.list ? `<div class="fld"><label for="listv">Precio de salida (€, mínimo su valor)</label><input id="listv" class="inp" type="number" min="${val(id)}" step="10000" value="${val(id)}"></div><button class="abtn" data-act="listok">Poner en el mercado</button>` : ""}`;
   } else if (sh.t === "search") {
     const q = (sh.q || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
@@ -626,10 +633,10 @@ document.addEventListener("click", async e => {
   if (a === "dobid") { const v = +document.getElementById("bidv").value; const id = S.sheet.id, it = S.st.market.find(i => i.pid === id), mn = it ? Math.max(it.price, val(id)) : 0;
     if (!(v >= mn)) return toast("No puedes pujar por menos de su valor: " + eur(mn) + " €."); if (await act("bid", { pid: id, amount: v }, "Puja guardada: " + eur(v) + " €")) { S.sheet = null; render(); } return; }
   if (a === "nobid") { const id = S.sheet.id; S.sheet = null; return act("bid", { pid: id, amount: 0 }, "Puja retirada"); }
-  if (a === "sellask") { S.sheet.confirm = true; return renderSheet(); }
-  if (a === "sellok") { const id = S.sheet.id; S.sheet = null; return act("sell", { pid: id }, "Vendido por " + eur(val(id)) + " €"); }
+  if (a === "offerask") { S.sheet.confirm = true; return renderSheet(); }
+  if (a === "offerok") { const id = S.sheet.id, it = S.st.market.find(i => i.pid === id && i.seller === S.st.me); S.sheet = null; return act("acceptOffer", { pid: id }, "Vendido a LIGA por " + eur(it ? it.offer : 0) + " €"); }
   if (a === "listask") { S.sheet.list = true; return renderSheet(); }
-  if (a === "listok") { const id = S.sheet.id, v = +document.getElementById("listv").value; S.sheet = null; return act("list", { pid: id, price: v }, "En el mercado hasta las 00:00"); }
+  if (a === "listok") { const id = S.sheet.id, v = +document.getElementById("listv").value; S.sheet = null; return act("list", { pid: id, price: v }, "En el mercado. Mira la oferta de LIGA en Acciones"); }
   if (a === "pub") { const J = S.imp; if (!J || J.err) return; b.disabled = true; if (await act("importJornada", { jornada: { n: J.n, matches: J.matches, st: J.st } }, "Puntos de la J" + J.n + " publicados")) { S.imp = null; render(); } else b.disabled = false; return; }
 });
 function confirm2(b) { if (b.dataset.sure) return true; b.dataset.sure = "1"; b.textContent = "¿Seguro?"; return false; }
