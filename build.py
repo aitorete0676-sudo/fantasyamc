@@ -16,6 +16,7 @@ head = """<!doctype html>
 <link rel="icon" href="/icon-192.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <script src="/config.js"></script>
+<script src="/game.js"></script>
 </head>
 <body>
 """
