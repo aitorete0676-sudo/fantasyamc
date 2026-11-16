@@ -17,6 +17,11 @@ header{position:sticky;top:0;z-index:20;background:var(--top);padding-top:env(sa
 .hd{display:grid;grid-template-columns:48px 1fr 48px;align-items:center;padding:8px 12px;min-height:60px;max-width:640px;margin:0 auto}
 .logo{text-align:center;font-weight:800;font-size:20px;letter-spacing:-.2px}
 .logo span{color:var(--accent);font-weight:700}
+button.logo{display:block;margin:0 auto;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.2}
+button.logo small{display:block;font-size:11px;color:var(--muted);font-weight:700}
+.lgrow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px;border-top:1px solid var(--line);width:100%;text-align:left}
+.lgrow:first-of-type{border-top:0} .lgrow b{display:block} .lgrow small{color:var(--muted)} .lgrow.on{background:#2b1f22}
+.code{font-family:ui-monospace,monospace;font-weight:800;letter-spacing:2px;font-size:20px;color:var(--yellow)}
 .rbtn{width:42px;height:42px;border-radius:50%;background:#14151b;border:1px solid var(--line);display:grid;place-items:center}
 .rbtn svg{width:20px;height:20px;stroke:var(--fg);fill:none;stroke-width:2;stroke-linecap:round}
 .subt{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;max-width:640px;margin:0 auto}
@@ -173,7 +178,7 @@ nav.bn svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:1.6
 <header>
   <div class="hd">
     <button class="rbtn" data-go="more" aria-label="Menú"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
-    <div class="logo">ALMAZORA C <span>fantasy</span></div>
+    <button class="logo" id="lgname" data-act="leagues">ALMAZORA C <span>fantasy</span></button>
     <button class="rbtn" data-act="search" aria-label="Buscar jugador"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></button>
   </div>
   <div id="subt"></div>
@@ -204,6 +209,9 @@ const S = { view: "team", sub: { team: "line", market: "mk", table: "gen", more:
 const CFG = window.FANTASY_CONFIG || { api: "/api/fantasy" };
 const TK = "almac-fantasy2-token";
 const tok = () => { try { return localStorage.getItem(TK) || ""; } catch (e) { return ""; } };
+const LGK = "almac-fantasy2-liga";
+let LG = (() => { try { return localStorage.getItem(LGK) || ""; } catch (e) { return ""; } })();
+function setLg(c) { LG = c || ""; try { localStorage.setItem(LGK, LG); } catch (e) {} }
 
 /* ---------- utilidades ---------- */
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -248,7 +256,7 @@ const myLineup = () => GAME.lineupFor(S.st.team, cur().n);
 
 /* ---------- servidor ---------- */
 async function api(action, body) {
-  const r = await fetch(CFG.api, { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + tok() }, body: JSON.stringify({ action, ...(body || {}) }) });
+  const r = await fetch(CFG.api, { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + tok() }, body: JSON.stringify({ action, lg: LG, ...(body || {}) }) });
   let j = {}; try { j = await r.json(); } catch (e) {}
   if (!r.ok) { const err = new Error(j.error || "Error de conexión"); err.status = r.status; throw err; }
   return j;
@@ -256,7 +264,7 @@ async function api(action, body) {
 let busy = false;
 async function refresh() {
   if (busy) return; busy = true;
-  try { const st = await api("state"); S.skew = st.now - Date.now(); S.st = st; S.store = "ok"; render(); }
+  try { const st = await api("state"); S.skew = st.now - Date.now(); S.st = st; S.store = "ok"; if (st.lg !== LG) setLg(st.lg); render(); }
   catch (e) { if (e.status === 401) { S.store = "auth"; render(); } }
   busy = false;
 }
@@ -275,7 +283,7 @@ async function boot() {
 async function auth(mode) {
   const u = (document.getElementById("au-user").value || "").trim(), pw = document.getElementById("au-pass").value || "";
   if (u.length < 2 || pw.length < 6) { S.authMsg = "El usuario necesita 2 letras o más y la contraseña 6 caracteres o más."; return render(); }
-  S.authMsg = mode === "up" ? "Creando cuenta y repartiendo tu plantilla…" : "Entrando…"; render();
+  S.authMsg = mode === "up" ? "Creando cuenta…" : "Entrando…"; render();
   try { const { token } = await api(mode === "up" ? "register" : "login", { username: u, password: pw });
     try { localStorage.setItem(TK, token); } catch (e) {}
     S.authMsg = ""; await refresh(); setInterval(() => { if (!document.hidden && !S.sheet && !document.querySelector("input:focus")) refresh(); }, 15000); setInterval(tickTimers, 1000);
@@ -295,13 +303,17 @@ function authView() {
    VISTAS
    ===================================================================== */
 const SUBS = { team: [["line", "Alineación"], ["squad", "Plantilla"], ["pts", "Puntos"]], market: [["mk", "Mercado"], ["ops", "Mis operaciones"], ["hist", "Histórico"]],
-  table: [["gen", "General"], ["jor", "Por jornada"]], more: [["rules", "Reglas"], ["admin", "Admin"]] };
+  table: [["gen", "General"], ["jor", "Por jornada"]], more: [["rules", "Reglas"], ["leagues", "Ligas"], ["admin", "Admin"]] };
 function render() {
   document.querySelectorAll("nav.bn button").forEach(b => b.classList.toggle("on", b.dataset.go === S.view));
   const main = document.getElementById("main"), info = document.getElementById("info"), bar = document.getElementById("mkbar"), subt = document.getElementById("subt");
   info.innerHTML = ""; bar.innerHTML = "";
   if (S.store === "auth") { subt.innerHTML = ""; main.innerHTML = authView(); return renderSheet(); }
   if (S.store !== "ok") { main.innerHTML = '<div class="empty">Cargando…</div>'; return; }
+  const cl = (S.st.leagues || []).find(l => l.code === S.st.lg), ln = document.getElementById("lgname");
+  if (ln) ln.innerHTML = cl ? `${esc(cl.name)}<small>Cambiar de liga ▾</small>` : 'ALMAZORA C <span>fantasy</span>';
+  if (!S.st.lg) {   // sin liga todavía
+    subt.innerHTML = ""; main.innerHTML = S.view === "more" && S.sub.more === "admin" ? adminView() : leaguesView(true); return renderSheet(); }
   const subs = SUBS[S.view] || [];
   subt.innerHTML = S.view === "activity" ? '<div class="subline"></div>' : `<div class="subt">${subs.map(([k, l]) => `<button data-sub="${k}" class="${S.sub[S.view] === k ? "on" : ""}">${l}</button>`).join("")}</div>`;
   if (S.view === "team" || S.view === "market") info.innerHTML = infoBar();
@@ -309,7 +321,7 @@ function render() {
   main.innerHTML = (v === "team" && !S.st.team.name ? welcome() : "") +
     (v === "team" ? (sub === "line" ? lineView() : sub === "squad" ? squadView() : ptsView()) :
      v === "market" ? (sub === "mk" ? marketView() : sub === "ops" ? opsView() : histView()) :
-     v === "table" ? tableView() : v === "activity" ? activityView() : sub === "admin" ? adminView() : rulesView());
+     v === "table" ? tableView() : v === "activity" ? activityView() : sub === "admin" ? adminView() : sub === "leagues" ? leaguesView() : rulesView());
   if (v === "market") { const bids = Object.values(S.st.myBids || {}).reduce((a, x) => a + x, 0);
     bar.innerHTML = `<div class="mkbar"><div><span><small>Pujas activas</small>${eur(bids)} €</span><b>${eur(S.st.team.money)} <span class="coin">€</span></b></div></div><div class="mkpad"></div>`; }
   renderSheet();
@@ -426,9 +438,21 @@ function activityView() {
   return S.st.log.length ? S.st.log.map(x => `<div class="act"><div class="h"><b>${esc(LOGT[x.type] || "Aviso")}</b><span>${fmtD(x.at)}</span></div><p>${esc(x.text)}</p></div>`).join("") : '<div class="empty">Sin actividad todavía.</div>';
 }
 
+/* ---- Ligas privadas (como en AlmaBet): crear, unirse con código y cambiar ---- */
+function leaguesView(first) {
+  const L = S.st.leagues || [], cl = L.find(l => l.code === S.st.lg);
+  return (first ? `<div class="box"><h3>Entra en una liga</h3><p>Crea tu liga y pasa el código a tus amigos, o únete a la de alguien con su código. En cada liga empiezas con ${eur(GAME.START_MONEY)} € y una plantilla de unos ${eur(GAME.START_VALUE)} €.</p></div>` : "") +
+    (cl ? `<div class="box"><h3>${esc(cl.name)}</h3><p>Código para invitar a tus amigos:</p><div class="row2" style="align-items:center"><span class="code">${esc(cl.code)}</span><button class="gbtn" data-share="${esc(cl.code)}">Compartir</button></div>
+      <p class="note">Cada liga tiene sus propias plantillas, mercado, precios y clasificación. Los puntos de los jugadores son los mismos en todas.</p></div>` : "") +
+    (L.length > 1 ? `<div class="box"><h3>Mis ligas</h3>${L.map(l => `<button class="lgrow ${l.code === S.st.lg ? "on" : ""}" data-lg="${esc(l.code)}"><span><b>${esc(l.name)}</b><small>${esc(l.code)}${l.admin === S.st.me ? " · la creaste tú" : ""}</small></span><span>${l.code === S.st.lg ? "Estás aquí" : "Entrar ›"}</span></button>`).join("")}</div>` : "") +
+    `<div class="box"><h3>Unirse a una liga</h3><div class="row2"><input id="lgcode" class="inp" maxlength="8" placeholder="Código, p. ej. K7M2QX" autocapitalize="characters" style="flex:1;text-transform:uppercase"><button class="abtn" data-act="joinlg">Unirme</button></div></div>
+    <div class="box"><h3>Crear una liga nueva</h3><div class="row2"><input id="lgnew" class="inp" maxlength="30" placeholder="Nombre, p. ej. Los de clase" style="flex:1"><button class="abtn" data-act="newlg">Crear</button></div></div>` +
+    (first ? `<div class="box"><p>Has entrado como <b>${esc(S.st.me)}</b>.</p><button class="gbtn" data-act="logout">Cerrar sesión</button></div>` : "");
+}
+
 /* ---- Reglas ---- */
 function rulesView() {
-  return `<div class="box"><h3>Cómo se juega</h3><p>Todos empezáis con ${eur(GAME.START_MONEY)} € y una plantilla aleatoria de ${Object.values(GAME.START_SQUAD).reduce((a, b) => a + b)} jugadores que vale unos ${eur(GAME.START_VALUE)} €. Entran los jugadores de los 16 equipos de la Tercera FFCV Grupo 2 y cada uno solo puede tener un dueño.</p>
+  return `<div class="box"><h3>Cómo se juega</h3><p>Todos empezáis con ${eur(GAME.START_MONEY)} € y una plantilla aleatoria de ${Object.values(GAME.START_SQUAD).reduce((a, b) => a + b)} jugadores que vale unos ${eur(GAME.START_VALUE)} €. Entran los jugadores de los 16 equipos de la Tercera FFCV Grupo 2 y, dentro de cada liga, cada uno solo puede tener un dueño.</p>
     <p>Alinea 11 antes del primer partido de cada jornada. Con menos de 11 no puntúas. El capitán puntúa doble. Cada punto te da ${eur(GAME.PER_POINT)} €. Recompensa diaria: ${eur(GAME.DAILY)} €. Máximo ${GAME.MAX_SQUAD} jugadores.</p></div>
     <div class="box"><h3>Mercado</h3><ul><li>Cada día a las 00:00 salen ${GAME.MARKET_SIZE} jugadores libres de LIGA. Puedes poner los tuyos también.</li>
     <li>Las pujas son a ciegas y duran hasta las 00:00. Gana la más alta (si empatan, la primera). La puja mínima es el precio de salida.</li>
@@ -554,6 +578,9 @@ document.addEventListener("click", async e => {
   if (d.mpos) { S.mpos = d.mpos; return render(); }
   if (d.tj) { S.tj = +d.tj; return render(); }
   if (d.ficha) { S.sheet = { t: "ficha", id: d.ficha }; return renderSheet(); }
+  if (d.lg) { setLg(d.lg); S.view = "team"; S.sheet = null; S.imp = null; scrollTo(0, 0); return refresh(); }
+  if (d.share) { const txt = `Únete a mi liga del fantasy del Almazora C con el código ${d.share}: ${location.origin}`;
+    if (navigator.share) navigator.share({ text: txt }).catch(() => {}); else navigator.clipboard.writeText(txt).then(() => toast("Código copiado"), () => toast(d.share)); return; }
   if (d.fj) { const [pid, n] = d.fj.split(":"); S.fj[pid] = +n; S.sheet.keep = true; renderSheet(); S.sheet.keep = false; return; }
   if (d.bid) { S.sheet = { t: "bid", id: d.bid }; return renderSheet(); }
   if (d.acts) { S.sheet = { t: "acts", id: d.acts }; return renderSheet(); }
@@ -570,8 +597,14 @@ document.addEventListener("click", async e => {
   const a = d.act;
   if (a === "daily") return act("daily", {}, "+" + eur(GAME.DAILY) + " €");
   if (a === "cap") { S.capMode = !S.capMode; return render(); }
-  if (a === "search") { S.sheet = { t: "search", q: "" }; return renderSheet(); }
+  if (a === "search") { if (!S.st || !S.st.lg) return; S.sheet = { t: "search", q: "" }; return renderSheet(); }
   if (a === "tname") { const v = (document.getElementById("tname").value || "").trim(); if (v) return act("teamName", { name: v }, "Guardado"); return; }
+  if (a === "leagues") { if (S.store !== "ok") return; S.view = "more"; S.sub.more = "leagues"; S.sheet = null; scrollTo(0, 0); return render(); }
+  if (a === "joinlg" || a === "newlg") {
+    const el = document.getElementById(a === "joinlg" ? "lgcode" : "lgnew"), v = (el.value || "").trim(); if (!v) return toast(a === "joinlg" ? "Escribe el código." : "Escribe un nombre.");
+    try { const r = await api(a === "joinlg" ? "joinLeague" : "createLeague", a === "joinlg" ? { code: v } : { name: v }); setLg(r.code); S.view = "team"; S.sub.team = "line";
+      toast(a === "joinlg" ? "Ya estás dentro. Te hemos repartido tu plantilla." : "Liga creada. Pasa el código " + r.code + " a tus amigos."); await refresh(); }
+    catch (e) { toast(e.message); } return; }
   if (a === "logout") { api("logout").catch(() => {}); try { localStorage.removeItem(TK); } catch (e) {} return location.reload(); }
   if (a === "dobid") { const v = +document.getElementById("bidv").value; const id = S.sheet.id; if (await act("bid", { pid: id, amount: v }, "Puja guardada: " + eur(v) + " €")) { S.sheet = null; render(); } return; }
   if (a === "nobid") { const id = S.sheet.id; S.sheet = null; return act("bid", { pid: id, amount: 0 }, "Puja retirada"); }
