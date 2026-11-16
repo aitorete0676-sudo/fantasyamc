@@ -59,7 +59,6 @@ select.form{background:var(--card);color:var(--fg);border:0;padding:10px 12px;fo
 .slot .cap{position:absolute;top:2px;right:3px}
 .slot .cap svg{width:18px;height:14px;fill:var(--yellow)}
 .shirt{width:82%;height:auto}
-.shirt.foto{aspect-ratio:1/1;object-fit:cover;border-radius:50%;border:2px solid #3a3d4a;background:#181a21}
 .shirt text{font-weight:800;font-family:inherit}
 .pos{display:inline-block;font-size:12px;font-weight:800;padding:3px 6px;color:#fff;letter-spacing:.02em}
 .pos.POR{background:var(--por)} .pos.DEF{background:var(--def)} .pos.CEN{background:var(--cen)} .pos.DEL{background:var(--del)}
@@ -230,8 +229,6 @@ const team = t => (S.liga.teams[t] || { short: "?" });
 const hue = t => (t * 47 + 8) % 360;
 const MY_T = 0;   // Almazora C
 function shirt(p, size) {
-  const fv = p && S.st && S.st.fotos && S.st.fotos[p.id];
-  if (fv) return `<img class="shirt foto" alt="" loading="lazy" src="${CFG.api}?foto=${encodeURIComponent(p.id)}&v=${fv}" style="width:${size || 82}%">`;
   const t = p ? p.t : -1, c = t === MY_T ? "#111" : t >= 0 ? `hsl(${hue(t)} 55% 45%)` : "#3c404d", c2 = t === MY_T ? "#fff" : t >= 0 ? `hsl(${hue(t)} 60% 30%)` : "#2a2c35";
   const stripes = t === MY_T ? '<path d="M38 20h6v70h-6zM50 18h6v72h-6zM62 20h6v70h-6z" fill="#fff" opacity=".9"/>' : "";
   return `<svg class="shirt" viewBox="0 0 100 100" style="width:${size || 82}%"><path d="M30 10l-22 14 9 18 9-5v55h48V37l9 5 9-18-22-14c-3 7-10 11-20 11s-17-4-20-11z" fill="${c}"/>${stripes}<path d="M30 10c3 7 10 11 20 11s17-4 20-11" fill="none" stroke="${c2}" stroke-width="4"/>
@@ -506,8 +503,6 @@ function fichaView(id) {
     <div class="kpis"><div><small>PFSY</small><b>${se.pf}</b></div><div><small>Media</small><b>${se.media.toFixed(2).replace(".", ",")}</b></div><div><small>Partidos</small><b>${se.apps}</b></div><div><small>Valor</small><b>${vv >= 1e6 ? (vv / 1e6).toFixed(1).replace(".", ",") + " M" : eur(vv)}</b></div></div>
     <div class="note">Valor histórico (últimos ${h.length} días): ${eur(vv)} €</div><div class="spark">${bars}</div>
     <div class="row2">${inMk && inMk.seller !== S.st.me ? `<button class="abtn" data-bid="${id}">${S.st.myBids[id] ? "Cambiar puja (" + eur(S.st.myBids[id]) + ")" : "Pujar"}</button>` : ""}${mine ? `<button class="abtn" data-acts="${id}">Acciones</button>` : ""}
-      <label class="gbtn" style="cursor:pointer">${S.st.fotos && S.st.fotos[id] ? "Cambiar foto" : "Poner foto"}<input type="file" accept="image/*" id="foto" data-pid="${id}" hidden></label>
-      ${S.st.fotos && S.st.fotos[id] ? `<button class="gbtn" data-nofoto="${id}">Quitar foto</button>` : ""}
       ${S.st.admin ? `<select class="form" id="setpos" data-pid="${id}" aria-label="Posición">${["POR", "DEF", "CEN", "DEL"].map(x => `<option ${x === posOf(id) ? "selected" : ""}>${x}</option>`).join("")}</select>` : ""}</div>
     <div class="jstrip">${strip}</div>${det}`;
 }
@@ -559,7 +554,6 @@ document.addEventListener("click", async e => {
   if (d.mpos) { S.mpos = d.mpos; return render(); }
   if (d.tj) { S.tj = +d.tj; return render(); }
   if (d.ficha) { S.sheet = { t: "ficha", id: d.ficha }; return renderSheet(); }
-  if (d.nofoto) { if (confirm2(b)) act("foto", { pid: d.nofoto, img: null }, "Foto quitada"); return; }
   if (d.fj) { const [pid, n] = d.fj.split(":"); S.fj[pid] = +n; S.sheet.keep = true; renderSheet(); S.sheet.keep = false; return; }
   if (d.bid) { S.sheet = { t: "bid", id: d.bid }; return renderSheet(); }
   if (d.acts) { S.sheet = { t: "acts", id: d.acts }; return renderSheet(); }
@@ -595,11 +589,6 @@ document.addEventListener("change", async e => {
     const byPos = { POR: [], DEF: [], CEN: [], DEL: [] }; l.s.forEach(id => { if (id && PL(id)) byPos[posOf(id)].push(id); });
     const s = [byPos.POR[0] || null]; [["DEF", rows[0]], ["CEN", rows[1]], ["DEL", rows[2]]].forEach(([pos, n]) => { for (let k = 0; k < n; k++) s.push(byPos[pos][k] || null); });
     return saveLineup({ f, s, c: s.includes(l.c) ? l.c : null }); }
-  if (e.target.id === "foto" && e.target.files[0]) {   // recorta al centro y la deja en 192×192 JPEG
-    try { const bmp = await createImageBitmap(e.target.files[0]), k = Math.min(bmp.width, bmp.height), c = document.createElement("canvas"); c.width = c.height = 192;
-      c.getContext("2d").drawImage(bmp, (bmp.width - k) / 2, (bmp.height - k) / 2, k, k, 0, 0, 192, 192);
-      S.sheet.keep = true; await act("foto", { pid: e.target.dataset.pid, img: c.toDataURL("image/jpeg", 0.82) }, "Foto guardada"); S.sheet.keep = false; }
-    catch (err) { toast("No se ha podido leer la imagen."); } return; }
   if (e.target.id === "setpos") return act("setPos", { pid: e.target.dataset.pid, pos: e.target.value }, "Posición cambiada");
   if (e.target.id === "actas") {
     try { const files = await Promise.all([...e.target.files].map(f => f.text().then(JSON.parse))); S.imp = parseActas(files);
