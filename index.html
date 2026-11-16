@@ -45,7 +45,7 @@ button.logo small{display:block;font-size:11px;color:var(--muted);font-weight:70
 .rbtn{width:42px;height:42px;border-radius:50%;background:#14151b;border:1px solid var(--line);display:grid;place-items:center}
 .rbtn svg{width:20px;height:20px;stroke:var(--fg);fill:none;stroke-width:2;stroke-linecap:round}
 .subt{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;max-width:640px;margin:0 auto}
-.subt button{padding:12px 4px;color:var(--muted);font-size:16px;border-bottom:3px solid transparent}
+.subt button{padding:12px 4px;color:var(--muted);font-size:16px;white-space:nowrap;border-bottom:3px solid transparent}
 .subt button.on{color:var(--fg);border-bottom-color:var(--accent)}
 .subline{border-bottom:3px solid var(--accent)}
 .info{display:grid;grid-template-columns:auto 1fr auto;gap:10px;padding:10px 16px 14px}
@@ -113,11 +113,34 @@ select.form{background:var(--card);color:var(--fg);border:0;padding:10px 12px;fo
 .boxes i.p{border-bottom-color:var(--ok)} .boxes i.z{border-bottom-color:#e0a030} .boxes i.n{border-bottom-color:var(--bad)} .boxes i.x{color:var(--muted)}
 .up{color:var(--ok)} .dn{color:var(--bad)}
 .trend{font-size:12px;font-weight:700}
+.mc{display:grid;grid-template-columns:20% minmax(0,1fr);background:#23252f;margin:0 -4px 8px}
+.mc .ph{position:relative;background:#1b1c22;display:flex;align-items:flex-end;justify-content:center;overflow:hidden;min-height:150px}
+.mc .ph .shirt:not(.foto){width:80%;margin:auto}
+.mc .ph .tmb{position:absolute;top:8px;right:4px;width:20px;z-index:2}
+img.crest{width:100%;height:auto;display:block;filter:drop-shadow(0 1px 1px rgba(0,0,0,.5))}
+.tm img.crest,.srow small img.crest{display:inline-block;width:auto;height:1.25em;vertical-align:-.3em;margin-right:4px}
+.mc .bd{padding:10px 8px 10px 9px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.mc .r1{display:flex;align-items:center;gap:8px;text-align:left;min-width:0;margin-bottom:2px}
+.mc .r1 > b{font-size:19px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+.mc .pf{color:#8d92a0;font-weight:700;font-size:12px;white-space:nowrap} .mc .pf b{color:#fff;font-size:24px;margin-left:4px;vertical-align:-2px;font-weight:800}
+.mc .r2{display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:14px}
+.mc .r2 > span{display:flex;align-items:center;gap:9px;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.mc .kv{color:#8d92a0} .mc .kv em{font-style:normal;color:#d5d8e0;margin-left:8px} .mc .kv b{color:#fff;margin-left:8px}
+.mc .lg{width:20px;height:20px;border-radius:50%;background:#14151b;color:var(--accent);display:grid;place-items:center;font-size:11px;font-weight:900;flex:none;font-style:italic}
+.mc .r3{display:flex;align-items:center;gap:8px;margin-top:4px;font-size:14px;color:#c9ccd6}
+.mc .r3 > span:first-child{display:flex;align-items:center;gap:8px;flex:1}
+.mc .r3 .ic{width:18px;height:18px}
+.mc .r3 .nb{font-size:13px;white-space:nowrap}
+.mc .r3 .abtn{border-radius:0;padding:7px 12px;font-size:16px;min-width:96px}
+.mkbar .lname{font-size:24px;font-weight:900;letter-spacing:-.5px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mkbar .sums{display:flex;align-items:center;gap:6px} .mkbar .nums{display:flex;flex-direction:column;align-items:flex-end;line-height:1.15}
+.mkbar .nums b{font-size:15px} .mkbar .nums i{font-style:normal;font-size:13px;font-weight:600}
+.mkbar .coin{background:#14151b;color:#fff}
 .mkbar{position:fixed;left:0;right:0;bottom:calc(66px + env(safe-area-inset-bottom,0px));z-index:15;background:var(--accent);color:#14151b}
 .mkbar div{max-width:640px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;padding:12px 16px;font-weight:800;gap:10px}
 .mkbar b{font-size:19px;font-variant-numeric:tabular-nums}
 .mkbar small{display:block;font-size:12px;font-weight:700}
-.mkpad{height:60px}
+.mkpad{height:76px}
 nav.bn{position:fixed;left:0;right:0;bottom:0;z-index:25;background:var(--bg);border-top:1px solid #1d1f27;padding-bottom:env(safe-area-inset-bottom,0px)}
 nav.bn .in{max-width:640px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);padding:6px 6px 4px}
 nav.bn button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 2px;font-size:12.5px;color:#d5d8e0;border-radius:28px}
@@ -172,7 +195,7 @@ nav.bn svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:1.6
 .fx .fh{display:grid;grid-template-columns:20% minmax(0,1fr);background:#23252f;min-height:140px}
 .fx .fh .av{position:relative;background:#23252f;display:grid;place-items:center;overflow:hidden}
 .fx .fh .av .shirt:not(.foto){width:84%}
-.fx .fh .av .tmb{position:absolute;top:6px;right:5px;width:18px;z-index:2}
+.fx .fh .av .tmb{position:absolute;top:6px;right:5px;width:20px;z-index:2}
 .fx .fh .bd{padding:12px 10px 10px 8px;display:flex;flex-direction:column;justify-content:space-between;gap:7px;min-width:0}
 .fx .r1{display:flex;align-items:center;gap:8px;min-width:0}
 .fx .r1 .pos{font-size:12px;padding:3px 5px}
@@ -240,11 +263,11 @@ nav.bn svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:1.6
 <div id="sheet"></div>
 <div class="toast" id="toast" hidden></div>
 <nav class="bn"><div class="in">
+  <button data-go="leagues"><svg viewBox="0 0 32 32"><path d="M10 5h12v7a6 6 0 0 1-12 0zM10 8H5c0 4 2 6 5 6M22 8h5c0 4-2 6-5 6M16 18v5M11 27h10M13 23h6v4h-6z"/></svg>Mis ligas</button>
   <button data-go="table"><svg viewBox="0 0 32 32"><path d="M5 27V15h7v12M12 27V7h8v20M20 27V12h7v15M3 27h26"/></svg>Clasificación</button>
   <button data-go="team"><svg viewBox="0 0 32 32"><rect x="4" y="6" width="24" height="20"/><path d="M16 6v20M4 11h4v10H4M28 11h-4v10h4"/><circle cx="16" cy="16" r="3"/></svg>Equipo</button>
   <button data-go="market"><svg viewBox="0 0 32 32"><path d="M6 12V7h20v5M6 26h20V12H6zM10 22l5-5 3 3 5-6M20 14h3v3"/></svg>Mercado</button>
   <button data-go="activity"><svg viewBox="0 0 32 32"><rect x="8" y="6" width="16" height="22" rx="2"/><path d="M12 4h8v4h-8zM12 14h8M12 18h8M12 22h8"/></svg>Actividad</button>
-  <button data-go="more"><svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="11"/><path d="M13 13a3 3 0 1 1 4 3c-1 .5-1 1-1 2.5M16 22v.5"/></svg>Más</button>
 </div></nav>
 
 <script>
@@ -286,6 +309,7 @@ const team = t => (S.liga.teams[t] || { short: "?" });
 const hue = t => (t * 47 + 8) % 360;
 const MY_T = 0;   // Almazora C
 const FOTOS = new Set();   // jugadores con foto en /fotos/<id>.jpg (lista en /fotos.json)
+const crest = t => t >= 0 && t < 16 ? `<img class="crest" alt="" loading="lazy" src="/escudos/${t}.png">` : "";
 function shirt(p, size) {
   if (p && FOTOS.has(p.id)) return `<img class="shirt foto" alt="" loading="lazy" src="/fotos/${encodeURIComponent(p.id)}.jpg" style="width:${size || 82}%">`;
   const t = p ? p.t : -1, c = t === MY_T ? "#111" : t >= 0 ? `hsl(${hue(t)} 55% 45%)` : "#3c404d", c2 = t === MY_T ? "#fff" : t >= 0 ? `hsl(${hue(t)} 60% 30%)` : "#2a2c35";
@@ -355,7 +379,7 @@ function authView() {
    VISTAS
    ===================================================================== */
 const SUBS = { team: [["line", "Alineación"], ["squad", "Plantilla"], ["pts", "Puntos"]], market: [["mk", "Mercado"], ["ops", "Mis operaciones"], ["hist", "Histórico"]],
-  table: [["gen", "General"], ["jor", "Por jornada"]], more: [["rules", "Reglas"], ["leagues", "Ligas"], ["admin", "Admin"]] };
+  table: [["gen", "General"], ["jor", "Por jornada"]], more: [["rules", "Reglas"], ["admin", "Admin"]] };
 function render() {
   document.querySelectorAll("nav.bn button").forEach(b => b.classList.toggle("on", b.dataset.go === S.view));
   const main = document.getElementById("main"), info = document.getElementById("info"), bar = document.getElementById("mkbar"), subt = document.getElementById("subt");
@@ -367,15 +391,16 @@ function render() {
   if (!S.st.lg) {   // sin liga todavía
     subt.innerHTML = ""; main.innerHTML = S.view === "more" && S.sub.more === "admin" ? adminView() : leaguesView(true); return renderSheet(); }
   const subs = SUBS[S.view] || [];
-  subt.innerHTML = S.view === "activity" ? '<div class="subline"></div>' : `<div class="subt">${subs.map(([k, l]) => `<button data-sub="${k}" class="${S.sub[S.view] === k ? "on" : ""}">${l}</button>`).join("")}</div>`;
-  if (S.view === "team" || S.view === "market") info.innerHTML = infoBar();
+  subt.innerHTML = S.view === "activity" || S.view === "leagues" ? '<div class="subline"></div>' : `<div class="subt">${subs.map(([k, l]) => `<button data-sub="${k}" class="${S.sub[S.view] === k ? "on" : ""}">${l}</button>`).join("")}</div>`;
+  if (S.view === "team") info.innerHTML = infoBar();
   const v = S.view, sub = S.sub[v];
   main.innerHTML = (v === "team" && !S.st.team.name ? welcome() : "") +
     (v === "team" ? (sub === "line" ? lineView() : sub === "squad" ? squadView() : ptsView()) :
      v === "market" ? (sub === "mk" ? marketView() : sub === "ops" ? opsView() : histView()) :
-     v === "table" ? tableView() : v === "activity" ? activityView() : sub === "admin" ? adminView() : sub === "leagues" ? leaguesView() : rulesView());
+     v === "leagues" ? leaguesView() : v === "table" ? tableView() : v === "activity" ? activityView() : sub === "admin" ? adminView() : sub === "leagues" ? leaguesView() : rulesView());
   if (v === "market") { const bids = Object.values(S.st.myBids || {}).reduce((a, x) => a + x, 0);
-    bar.innerHTML = `<div class="mkbar"><div><span><small>Pujas activas</small>${eur(bids)} €</span><b>${eur(S.st.team.money)} <span class="coin">€</span></b></div></div><div class="mkpad"></div>`; }
+    const cl = (S.st.leagues || []).find(l => l.code === S.st.lg);
+    bar.innerHTML = `<div class="mkbar"><div><span class="lname">${esc(cl ? cl.name : "LIGA")}</span><span class="sums"><span class="nums"><b>${eur(S.st.team.money)}</b><i>-${eur(bids)}</i><b>${eur(S.st.team.money - bids)}</b></span><span class="coin">€</span></span></div></div><div class="mkpad"></div>`; }
   renderSheet();
 }
 function tickTimers() { document.querySelectorAll("[data-ends]").forEach(el => el.textContent = hms(+el.dataset.ends - now())); }
@@ -416,6 +441,16 @@ function lineView() {
 }
 
 /* ---- tarjeta de jugador (plantilla y mercado) ---- */
+// Tarjeta del mercado, como en LaLiga Fantasy
+function mcard(item) {
+  const id = item.pid, p = PL(id), se = seasonOf(id), my = S.st.myBids[id], mine = item.seller === S.st.me;
+  const btn = mine ? `<button class="abtn" data-acts="${id}">Acciones</button>` : my ? `<button class="abtn" data-bid="${id}">Acciones</button>` : `<button class="abtn" data-bid="${id}">Fichar</button>`;
+  return `<div class="mc"><button class="ph" data-ficha="${id}" aria-label="Ver ficha de ${esc(p.n)}">${shirt(p, 80)}<span class="tmb">${crest(p.t)}</span></button>
+    <div class="bd"><button class="r1" data-ficha="${id}"><span class="pos ${posOf(id)}">${posOf(id)}</span><b>${esc(p.n)}</b><span class="pf">PFSY<b>${se.pf}</b></span></button>
+      <div class="r2"><span><span class="lg">${item.seller === "LIGA" ? "L" : esc((teamName(item.seller) || "?")[0].toUpperCase())}</span>${item.seller === "LIGA" ? "LIGA" : esc(teamName(item.seller))}</span><span class="kv">Valor<em>${eur(val(id))}</em></span></div>
+      <div class="r2"><span><span class="ck">${CHK}</span>Alineable</span><span class="kv">Precio<b>${eur(item.price)}</b></span></div>
+      <div class="r3"><span>${CLOCK}<span data-ends="${item.ends}">${hms(item.ends - now())}</span></span>${item.nb ? `<span class="nb">${item.nb} pujas</span>` : ""}${btn}</div></div></div>`;
+}
 function pcard(id, mode, item) {
   const p = PL(id), se = seasonOf(id), js = allJ().slice(-5), v = val(id), prev = S.st.prices.prev[id] || v;
   const boxes = js.map(J => { const m = GAME.mins(J, id), pt = ptsOf(id, J); return `<i class="${!(m > 0) ? "x" : pt > 4 ? "p" : pt > 0 ? "z" : "n"}">${m > 0 ? pt : "–"}</i>`; }).join("");
@@ -433,7 +468,7 @@ function pcard(id, mode, item) {
       <div class="ln"><span class="coin">€</span>${eur(v)}</div><div class="rt">${trend}</div>`;
     btn = `<button class="abtn sm" data-acts="${id}">Acciones</button>`;
   }
-  return `<div class="pcard"><button class="ph" data-ficha="${id}" aria-label="Ver ficha de ${esc(p.n)}">${shirt(p, 70)}${inL ? `<span class="inxi">${CHK}</span>` : ""}<span class="tm">${esc(team(p.t).short)}</span></button><div class="bd">
+  return `<div class="pcard"><button class="ph" data-ficha="${id}" aria-label="Ver ficha de ${esc(p.n)}">${shirt(p, 70)}${inL ? `<span class="inxi">${CHK}</span>` : ""}<span class="tm">${crest(p.t)}${esc(team(p.t).short)}</span></button><div class="bd">
     <button class="tt" data-ficha="${id}"><span class="pos ${posOf(id)}">${posOf(id)}</span><b>${esc(p.n)}</b></button><div class="big">PFSY<b>${se.pf}</b></div>
     ${mid}<div class="boxes">${boxes}</div><div>${btn}</div></div></div>`;
 }
@@ -455,9 +490,7 @@ function ptsView() {
 /* ---- Mercado ---- */
 function marketView() {
   const pos = S.mpos, items = S.st.market.filter(i => PL(i.pid) && (pos === "ALL" || (pos === "FAV" ? isFav(i.pid) : posOf(i.pid) === pos))).sort((a, b) => (a.seller === "LIGA") - (b.seller === "LIGA") || val(b.pid) - val(a.pid));
-  return rewardBox() + `<div class="chips">${[["ALL", "Todos"], ["POR", "Porteros"], ["DEF", "Defensas"], ["CEN", "Medios"], ["DEL", "Delanteros"], ["FAV", "★ Favoritos"]].map(([k, l]) => `<button data-mpos="${k}" class="${pos === k ? "on" : ""}">${l}</button>`).join("")}</div>` +
-    `<div class="note">Pujas a ciegas: nadie ve lo que pujan los demás. A las ${esc(S.st.close)} gana la puja más alta y sale mercado nuevo.</div>` +
-    (items.length ? items.map(i => pcard(i.pid, "market", i)).join("") : '<div class="empty">No hay jugadores en el mercado.</div>');
+  return rewardBox() + (items.length ? items.map(mcard).join("") : '<div class="empty">No hay jugadores en el mercado.</div>');
 }
 // Cláusula de un jugador con dueño: { owner, c, until (fin del blindaje) }
 function clauseInfo(id) {
@@ -595,7 +628,7 @@ function fichaView(id) {
   const ci = clauseInfo(id);
   return `<div class="fx"><div class="fbar"><button class="back" data-back="1" aria-label="Volver"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
       <button class="favb ${isFav(id) ? "on" : ""}" data-fav="${id}">${isFav(id) ? "En favoritos" : "Añadir a favoritos"} ${STAR(isFav(id))}</button></div>
-    <div class="fh"><div class="av">${shirt(p, 84)}${FOTOS.has(p.id) ? `<span class="tmb">${shirt({ id: "", t: p.t, d: "" }, 100)}</span>` : ""}</div>
+    <div class="fh"><div class="av">${shirt(p, 84)}<span class="tmb">${crest(p.t)}</span></div>
       <div class="bd"><div class="r1"><span class="pos ${posOf(id)}">${posOf(id)}</span><h2>${esc(p.n)}</h2><span class="pf">PFSY<b>${se.pf}</b></span></div>
         <div class="r2"><span><span class="ck">${CHK}</span>Alineable</span><span class="md">MEDIA:<b>${(Math.round(se.media * 10) / 10).toString()}</b></span></div>
         <div class="r2"><span><span class="coin">€</span>${eur(vv)}</span><span>${LK}${eur(ci ? ci.c : vv)}</span></div>
@@ -607,7 +640,7 @@ function fichaView(id) {
 const fold = x => String(x || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 function searchRow(id) {
   const p = PL(id), ow = ownerOf(id);
-  return `<button class="srow" data-ficha="${id}"><span class="sav">${shirt(p, 90)}</span><span class="snm"><b><span class="pos ${posOf(id)}">${posOf(id)}</span> ${esc(p.n)}${isFav(id) ? " " + STAR(true) : ""}</b><small>${esc(team(p.t).name)}${ow ? " · " + esc(teamName(ow)) : ""}</small></span><span class="sv">${eur(val(id))}</span></button>`;
+  return `<button class="srow" data-ficha="${id}"><span class="sav">${shirt(p, 90)}</span><span class="snm"><b><span class="pos ${posOf(id)}">${posOf(id)}</span> ${esc(p.n)}${isFav(id) ? " " + STAR(true) : ""}</b><small>${crest(p.t)}${esc(team(p.t).name)}${ow ? " · " + esc(teamName(ow)) : ""}</small></span><span class="sv">${eur(val(id))}</span></button>`;
 }
 function searchResults(q) {
   const words = fold(q).split(/\s+/).filter(Boolean);
@@ -705,7 +738,7 @@ document.addEventListener("click", async e => {
   if (a === "cap") { S.capMode = !S.capMode; return render(); }
   if (a === "search") { if (!S.st || !S.st.lg) return; S.sheet = { t: "search", q: "" }; return renderSheet(); }
   if (a === "tname") { const v = (document.getElementById("tname").value || "").trim(); if (v) return act("teamName", { name: v }, "Guardado"); return; }
-  if (a === "leagues") { if (S.store !== "ok") return; S.view = "more"; S.sub.more = "leagues"; S.sheet = null; scrollTo(0, 0); return render(); }
+  if (a === "leagues") { if (S.store !== "ok") return; S.view = "leagues"; S.sheet = null; scrollTo(0, 0); return render(); }
   if (a === "joinlg" || a === "newlg") {
     const el = document.getElementById(a === "joinlg" ? "lgcode" : "lgnew"), v = (el.value || "").trim(); if (!v) return toast(a === "joinlg" ? "Escribe el código." : "Escribe un nombre.");
     try { const r = await api(a === "joinlg" ? "joinLeague" : "createLeague", a === "joinlg" ? { code: v } : { name: v }); setLg(r.code); S.view = "team"; S.sub.team = "line";

@@ -254,9 +254,9 @@ module.exports = async (req, res) => {
       const teams = {};
       for (const u of users) { const t = u === me.name ? mine : await getJ(k("team:") + u); if (!t) continue;
         teams[u] = { name: t.name, squad: t.squad, lineups: t.lineups, cl: Object.fromEntries(t.squad.map(id => [id, clauseOf(t, id, pr)])), since: t.since || {}, joined: t.joined || 0 }; }   // el dinero de los demás no se enseña
-      const myBids = {}; for (const it of (market ? market.items : [])) { const v = await redis("HGET", k("bids:") + it.pid, me.name); if (v) myBids[it.pid] = JSON.parse(v).amount; }
+      const myBids = {}, nb = {}; for (const it of (market ? market.items : [])) { const all = await hgetall(k("bids:") + it.pid); nb[it.pid] = Object.keys(all).length; if (all[me.name]) myBids[it.pid] = all[me.name].amount; }
       const imported = {}; Object.values(J).filter(j => j.n >= G.FIRST_J).forEach(j => imported[j.n] = j);
-      return send(200, { me: me.name, admin, now: Date.now(), leagues: lgList, lg, close: k.hm, team: mine, teams, owner, prices: { v: pr.v, prev: pr.prev, h: pr.h }, market: market ? market.items : [],
+      return send(200, { me: me.name, admin, now: Date.now(), leagues: lgList, lg, close: k.hm, team: mine, teams, owner, prices: { v: pr.v, prev: pr.prev, h: pr.h }, market: market ? market.items.map(i => ({ ...i, nb: nb[i.pid] || 0 })) : [],
         myBids, points, log: (logs || []).map(x => JSON.parse(x)), jornadas: imported, current: { ...cur, locked: !!locked }, pos: POSO });
     }
     if (a === "fav") {   // favoritos (en cada liga los suyos)
