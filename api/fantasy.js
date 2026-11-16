@@ -255,9 +255,12 @@ module.exports = async (req, res) => {
       for (const u of users) { const t = u === me.name ? mine : await getJ(k("team:") + u); if (!t) continue;
         teams[u] = { name: t.name, squad: t.squad, lineups: t.lineups, cl: Object.fromEntries(t.squad.map(id => [id, clauseOf(t, id, pr)])), since: t.since || {}, joined: t.joined || 0 }; }   // el dinero de los demás no se enseña
       const myBids = {}, nb = {}; for (const it of (market ? market.items : [])) { const all = await hgetall(k("bids:") + it.pid); nb[it.pid] = Object.keys(all).length; if (all[me.name]) myBids[it.pid] = all[me.name].amount; }
+      const offersIn = [], offersOut = []; for (const [f, o] of Object.entries(await hgetall(k("offers")))) {
+        if (owner[o.pid] !== o.to) { await redis("HDEL", k("offers"), f); continue; }
+        if (o.to === me.name) offersIn.push(o); else if (o.from === me.name) offersOut.push(o); }
       const imported = {}; Object.values(J).filter(j => j.n >= G.FIRST_J).forEach(j => imported[j.n] = j);
       return send(200, { me: me.name, admin, now: Date.now(), leagues: lgList, lg, close: k.hm, team: mine, teams, owner, prices: { v: pr.v, prev: pr.prev, h: pr.h }, market: market ? market.items.map(i => ({ ...i, nb: nb[i.pid] || 0 })) : [],
-        myBids, points, log: (logs || []).map(x => JSON.parse(x)), jornadas: imported, current: { ...cur, locked: !!locked }, pos: POSO });
+        myBids, offersIn, offersOut, points, log: (logs || []).map(x => JSON.parse(x)), jornadas: imported, current: { ...cur, locked: !!locked }, pos: POSO });
     }
     if (a === "fav") {   // favoritos (en cada liga los suyos)
       if (!PL[b.pid]) return send(400, { error: "Jugador desconocido." });
@@ -284,6 +287,35 @@ module.exports = async (req, res) => {
       const mk = await getJ(k("market")); if (mk && mk.items.some(i => i.pid === b.pid)) { mk.items = mk.items.filter(i => i.pid !== b.pid); await setJ(k("market"), mk); await redis("DEL", k("bids:") + b.pid); }
       await log(k, "market", `¡Clausulazo! ${mine.name || me.name} ha pagado la cláusula de ${PL[b.pid].n} a ${t.name || ow}: ${c.toLocaleString("es-ES")}€`);
       return send(200, { ok: true, amount: c });
+    }
+    // ---- ofertas entre mánagers: ofreces dinero al dueño; si acepta, el jugador pasa a tu equipo al momento ----
+    if (a === "mgrOffer" || a === "mgrCancel" || a === "mgrAccept" || a === "mgrReject") {
+      const pid = String(b.pid || ""); if (!PL[pid]) return send(400, { error: "Jugador desconocido." });
+      const ow = await redis("HGET", k("owner"), pid);
+      if (a === "mgrOffer") {
+        if (!ow || ow === me.name) return send(400, { error: "Ese jugador no tiene dueño rival." });
+        const pr = await getPrices(), v = pr.v[pid] || 0, x = Math.round(+b.amount || 0);
+        if (!(x >= v)) return send(400, { error: "La oferta no puede ser menor que su valor (" + v.toLocaleString("es-ES") + " €)." });
+        if (x > mine.money) return send(400, { error: "No tienes tanto saldo." });
+        await redis("HSET", k("offers"), pid + "|" + me.name, JSON.stringify({ pid, from: me.name, to: ow, amount: x, at: Date.now() }));
+        await log(k, "market", `${mine.name || me.name} ha hecho una oferta por ${PL[pid].n} a ${(await getJ(k("team:") + ow) || {}).name || ow}`);
+        return send(200, { ok: true });
+      }
+      if (a === "mgrCancel") { await redis("HDEL", k("offers"), pid + "|" + me.name); return send(200, { ok: true }); }
+      const from = String(b.from || ""), raw = await redis("HGET", k("offers"), pid + "|" + from); const o = raw ? JSON.parse(raw) : null;
+      if (!o || ow !== me.name) { if (o) await redis("HDEL", k("offers"), pid + "|" + from); return send(400, { error: "Esa oferta ya no está activa." }); }
+      const buyerKey = k("team:") + from, buyer = await getJ(buyerKey);
+      if (a === "mgrReject") { await redis("HDEL", k("offers"), pid + "|" + from); await log(k, "market", `${mine.name || me.name} ha rechazado la oferta de ${(buyer && buyer.name) || from} por ${PL[pid].n}`); return send(200, { ok: true }); }
+      if (locked) return send(400, { error: "Durante la jornada no se pueden cerrar traspasos." });
+      if (!buyer || buyer.money < o.amount) return send(400, { error: "El comprador ya no tiene saldo para pagar esa oferta." });
+      if (buyer.squad.length >= G.MAX_SQUAD) return send(400, { error: "El comprador ya tiene el máximo de jugadores." });
+      if (!mine.squad.includes(pid)) return send(400, { error: "Ese jugador ya no es tuyo." });
+      mine.squad = mine.squad.filter(x => x !== pid); mine.money += o.amount; dropFromLineups(mine, pid); lose(mine, pid); await setJ(myKey, mine);
+      buyer.money -= o.amount; buyer.squad.push(pid); gain(buyer, pid, o.amount); await setJ(buyerKey, buyer); await redis("HSET", k("owner"), pid, from);
+      const mk = await getJ(k("market")); if (mk && mk.items.some(i => i.pid === pid)) { mk.items = mk.items.filter(i => i.pid !== pid); await setJ(k("market"), mk); await redis("DEL", k("bids:") + pid); }
+      const all = await hgetall(k("offers")); for (const f of Object.keys(all)) if (f.startsWith(pid + "|")) await redis("HDEL", k("offers"), f);
+      await log(k, "market", `${(buyer.name) || from} ha fichado a ${PL[pid].n} de ${mine.name || me.name} por ${o.amount.toLocaleString("es-ES")}€ (oferta aceptada)`);
+      return send(200, { ok: true, amount: o.amount });
     }
     if (a === "teamName") { mine.name = String(b.name || "").trim().slice(0, 28); await setJ(myKey, mine); return send(200, { ok: true }); }
     if (a === "daily") {

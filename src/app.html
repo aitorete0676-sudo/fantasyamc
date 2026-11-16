@@ -112,6 +112,13 @@ select.form{background:var(--card);color:var(--fg);border:0;padding:10px 12px;fo
 .ct b{font-size:13px;line-height:1.15;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .cs{font-weight:800;font-size:18px;min-width:54px;text-align:center}
 .cs.v{color:var(--muted);font-size:13px;font-weight:600}
+.ofr{display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.ofr:first-of-type{border-top:0}
+.ofn{text-align:left;min-width:0}.ofn b{display:block}.ofn small{color:var(--muted);font-size:12px}
+.ofa{font-size:16px;white-space:nowrap}
+.ofb{grid-column:1/-1;display:flex;gap:8px;justify-content:flex-end}
+.abtn.sm{padding:8px 16px;width:auto}
+.ofban{display:block;width:100%;text-align:left;background:var(--accent);color:#fff;font-weight:700;border-radius:10px;padding:12px 14px;margin-bottom:10px}
 img.crest{width:100%;height:auto;display:block;filter:drop-shadow(0 1px 1px rgba(0,0,0,.5))}
 img.crest.dk{filter:drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff)}
 .tm img.crest,.srow small img.crest{display:inline-block;width:auto;height:1.25em;vertical-align:-.3em;margin-right:4px}
@@ -485,9 +492,14 @@ function ptsView() {
 }
 
 /* ---- Mercado ---- */
+const offIn = () => S.st.offersIn || [], offOut = () => S.st.offersOut || [];
+function offRow(o, inc) {
+  return `<div class="ofr"><button class="ofn" data-ficha="${o.pid}"><b>${esc(PL(o.pid).n)}</b><small>${inc ? "De " + esc(teamName(o.from)) : "A " + esc(teamName(o.to))} · valor ${eur(val(o.pid))} €</small></button><b class="ofa">${eur(o.amount)} €</b>
+    <div class="ofb">${inc ? `<button class="gbtn" data-mrej="${o.pid}|${esc(o.from)}">Rechazar</button><button class="abtn sm" data-macc="${o.pid}|${esc(o.from)}" ${locked() ? "disabled" : ""}>Aceptar</button>` : `<button class="gbtn" data-mcancel="${o.pid}">Retirar</button>`}</div></div>`;
+}
 function marketView() {
   const pos = S.mpos, items = S.st.market.filter(i => PL(i.pid) && (pos === "ALL" || (pos === "FAV" ? isFav(i.pid) : posOf(i.pid) === pos))).sort((a, b) => (a.seller === "LIGA") - (b.seller === "LIGA") || val(b.pid) - val(a.pid));
-  return rewardBox() + (items.length ? items.map(mcard).join("") : '<div class="empty">No hay jugadores en el mercado.</div>');
+  return rewardBox() + (offIn().length ? `<button class="ofban" data-sub="ops">Tienes ${offIn().length} oferta${offIn().length > 1 ? "s" : ""} de otros mánagers ›</button>` : "") + (items.length ? items.map(mcard).join("") : '<div class="empty">No hay jugadores en el mercado.</div>');
 }
 // Cláusula de un jugador con dueño: { owner, c, until (fin del blindaje) }
 function clauseInfo(id) {
@@ -509,7 +521,9 @@ function opsView() {
   const bids = Object.entries(S.st.myBids || {}), lists = S.st.market.filter(i => i.seller === S.st.me);
   const mine = new RegExp("^(" + [S.st.me, S.st.team.name].filter(Boolean).map(x => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ") ha");
   const hist = S.st.log.filter(x => x.type === "market" && mine.test(x.text));
-  return `<div class="box"><h3>Mis pujas</h3>${bids.length ? `<table>${bids.map(([id, a]) => `<tr><td><button data-ficha="${id}">${esc(PL(id).n)}</button></td><td><button class="gbtn" data-bid="${id}">${eur(a)} €</button></td></tr>`).join("")}</table>` : "<p>No tienes pujas activas.</p>"}</div>
+  return (offIn().length ? `<div class="box"><h3>Ofertas recibidas</h3>${offIn().map(o => offRow(o, 1)).join("")}${locked() ? '<p class="note">Durante la jornada no se pueden aceptar.</p>' : ""}</div>` : "") +
+    (offOut().length ? `<div class="box"><h3>Ofertas enviadas</h3>${offOut().map(o => offRow(o, 0)).join("")}</div>` : "") +
+    `<div class="box"><h3>Mis pujas</h3>${bids.length ? `<table>${bids.map(([id, a]) => `<tr><td><button data-ficha="${id}">${esc(PL(id).n)}</button></td><td><button class="gbtn" data-bid="${id}">${eur(a)} €</button></td></tr>`).join("")}</table>` : "<p>No tienes pujas activas.</p>"}</div>
     <div class="box"><h3>En venta</h3>${lists.length ? `<table>${lists.map(i => `<tr><td><button data-ficha="${i.pid}">${esc(PL(i.pid).n)}</button><br><small class="note">desde ${eur(i.price)} €</small></td><td>${i.offer ? `<button class="gbtn" data-acts="${i.pid}">LIGA ofrece ${eur(i.offer)} €</button>` : ""}</td></tr>`).join("")}</table>` : "<p>No tienes jugadores en el mercado.</p>"}</div>
     ${hist.map(x => `<div class="act"><div class="h"><b>Operación</b><span>${fmtD(x.at)}</span></div><p>${esc(x.text)}</p></div>`).join("")}`;
 }
@@ -693,6 +707,7 @@ function renderSheet() {
     const status = own ? (own === S.st.me ? "En tu equipo" : "Es de " + teamName(own)) : inMk ? "En el mercado" : "Libre (LIGA)";
     body = `<h3>${esc(p.n)}</h3><p class="note" style="margin-top:-4px">${esc(status)} · ${esc(team(p.t).name)}</p>` + (mine ? `
       ${listed ? `<button class="opt" data-unlist="${id}"><b>Quitar del mercado</b></button>` : `<button class="opt" data-act="listask"><b>Poner en el mercado</b><span>pujan los demás y LIGA te hace una oferta cada día</span></button>`}
+      ${offIn().filter(o => o.pid === id).map(o => offRow(o, 1)).join("")}
       ${offerBtn(id, sh.confirm)}
       ${ci ? (sh.raise ? `<div class="fld"><label for="raisev">Pagas (€). La cláusula sube el doble. Ahora: ${eur(ci.c)} €</label><input id="raisev" class="inp" type="number" min="100000" step="100000" value="1000000"></div><button class="abtn" data-act="raiseok">Subir cláusula</button>`
         : `<button class="opt" data-act="raiseask"><b>Subir cláusula</b><span>Ahora ${eur(ci.c)} € · ${now() < ci.until ? "blindado hasta el " + fmtWhen(ci.until) : "sin blindaje"}</span></button>`) : ""}
@@ -701,6 +716,9 @@ function renderSheet() {
       ${ci ? (now() < ci.until ? `<div class="opt"><b>Cláusula ${eur(ci.c)} €</b><span>blindado hasta el ${fmtWhen(ci.until)}</span></div>`
         : sh.clause ? `<button class="opt red" data-act="clauseok" data-pid="${id}" ${S.st.team.money < ci.c || locked() ? "disabled" : ""}><b>Confirmar: pagar ${eur(ci.c)} € a ${esc(teamName(ci.owner))}</b><span>${locked() ? "no se puede durante la jornada" : S.st.team.money < ci.c ? "te faltan " + eur(ci.c - S.st.team.money) + " €" : "pasa a tu equipo ahora mismo"}</span></button>`
         : `<button class="opt" data-act="clauseask" data-pid="${id}"><b>Pagar cláusula</b><span>${eur(ci.c)} € · tu saldo ${eur(S.st.team.money)} €</span></button>`) : ""}
+      ${own && own !== S.st.me ? (() => { const mo = offOut().find(o => o.pid === id);
+        return sh.mof ? `<div class="fld"><label for="mofv">Tu oferta a ${esc(teamName(own))} (€, mínimo su valor). Tu saldo: ${eur(S.st.team.money)} €</label><input id="mofv" class="inp" type="number" min="${val(id)}" step="100000" value="${mo ? mo.amount : val(id)}"></div><button class="abtn" data-act="mofok">Enviar oferta</button>`
+          : `<button class="opt" data-act="mofask"><b>${mo ? "Cambiar oferta (" + eur(mo.amount) + " €)" : "Hacer oferta a " + esc(teamName(own))}</b><span>si la acepta, pasa a tu equipo al momento</span></button>${mo ? `<button class="opt" data-mcancel="${id}"><b>Retirar oferta</b></button>` : ""}`; })() : ""}
       ${!inMk && !ci ? '<p class="note">No está en el mercado. Si sale, podrás pujar por él.</p>' : ""}`) +
       (S.st.admin ? `<div class="fld" style="margin-top:10px"><label for="setpos">Posición (admin)</label><select class="form" id="setpos" data-pid="${id}">${["POR", "DEF", "CEN", "DEL"].map(x => `<option ${x === posOf(id) ? "selected" : ""}>${x}</option>`).join("")}</select></div>` : "");
   } else if (sh.t === "search") {
@@ -740,6 +758,9 @@ document.addEventListener("click", async e => {
   if (d.bid) { S.sheet = { t: "bid", id: d.bid, prev: S.sheet && S.sheet.t === "ficha" ? S.sheet : null }; return renderSheet(); }
   if (d.acts) { S.sheet = { t: "acts", id: d.acts, prev: S.sheet && S.sheet.t === "ficha" ? S.sheet : null }; return renderSheet(); }
   if (d.rival) { S.sheet = { t: "rival", u: d.rival }; return renderSheet(); }
+  if (d.mcancel) { return act("mgrCancel", { pid: d.mcancel }, "Oferta retirada"); }
+  if (d.macc) { const [pid, from] = d.macc.split("|"); S.sheet = null; return act("mgrAccept", { pid, from }, PL(pid).n + " vendido a " + teamName(from)); }
+  if (d.mrej) { const [pid, from] = d.mrej.split("|"); return act("mgrReject", { pid, from }, "Oferta rechazada"); }
   if (d.unlist) { S.sheet = (S.sheet && S.sheet.prev) || null; return act("unlist", { pid: d.unlist }, "Retirado del mercado"); }
   if (d.unpub) { if (!confirm2(b)) return; return act("unpublish", { n: +d.unpub }, "Jornada quitada"); }
   if (d.slot != null && b.classList.contains("slot")) {
@@ -768,6 +789,8 @@ document.addEventListener("click", async e => {
   if (a === "offerok") { const id = S.sheet.id, it = S.st.market.find(i => i.pid === id && i.seller === S.st.me); S.sheet = null; return act("acceptOffer", { pid: id }, "Vendido a LIGA por " + eur(it ? it.offer : 0) + " €"); }
   if (a === "clauseask") { S.sheet.clause = true; return renderSheet(); }
   if (a === "clauseok") { const id = b.dataset.pid; S.sheet = S.sheet.prev || null; return act("payClause", { pid: id }, "¡Clausulazo! " + PL(id).n + " ya es tuyo"); }
+  if (a === "mofask") { S.sheet.mof = true; return renderSheet(); }
+  if (a === "mofok") { const id = S.sheet.id, v = +document.getElementById("mofv").value; S.sheet.mof = false; return act("mgrOffer", { pid: id, amount: v }, "Oferta enviada a " + teamName(ownerOf(id))); }
   if (a === "raiseask") { S.sheet.raise = true; return renderSheet(); }
   if (a === "raiseok") { const id = S.sheet.id, v = +document.getElementById("raisev").value; S.sheet = S.sheet.prev || null; return act("raiseClause", { pid: id, amount: v }, "Cláusula subida"); }
   if (a === "listask") { S.sheet.list = true; return renderSheet(); }
