@@ -145,6 +145,31 @@ select.form{background:var(--card);color:var(--fg);border:0;padding:10px 12px;fo
 .cfr{display:grid;grid-template-columns:1fr 1fr;gap:10px}.cfr button{background:#eee;border-radius:22px;padding:12px;font-size:16px;color:#14151b}
 .toast.ok{background:#43a537;color:#fff;font-weight:500;display:flex;justify-content:space-between;align-items:center;gap:16px;width:calc(100% - 32px);padding:14px 16px}
 .toast.ok button{color:#fff;font-size:22px;line-height:1}
+/* menú Acciones (estilo iOS) y Fijar el precio de venta */
+.sheet.ios{align-items:flex-end;background:rgba(0,0,0,.35);padding:0 0 calc(70px + env(safe-area-inset-bottom,0px))}
+.iosm{width:62%;max-width:300px;background:rgba(190,190,195,.55);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);border-radius:30px;padding:10px;display:grid;gap:8px}
+.iosm button{background:rgba(255,255,255,.22);border-radius:22px;padding:14px 10px;font-size:17px;color:#14151b;text-align:center}
+.iosm button.pu{color:#8b5cf6}
+.sell{max-width:640px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;background:#14151b}
+.sell .shd{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;padding:calc(14px + env(safe-area-inset-top,0px)) 14px 10px}
+.sell .shd h1{font-size:17px;font-weight:700;margin:0;text-align:center}
+.sell .shd button svg{width:24px;height:24px;fill:none;stroke:#fff;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.sav{width:96px;height:96px;border-radius:50%;border:2px solid #fff;margin:8px auto 18px;overflow:hidden;display:grid;place-items:end center;background:#23252f}
+.sav .shirt{width:100%!important}
+.skv{display:grid;grid-template-columns:auto 1fr auto;gap:8px 8px;width:max-content;margin:0 auto;align-items:center;font-size:13px}
+.skv span{color:#9aa0ad;text-transform:uppercase;letter-spacing:.3px;padding-right:28px}.skv b{text-align:right;font-size:15px}
+.skv .lkc{width:16px;height:16px;border-radius:50%;background:var(--ok);display:grid;place-items:center}.skv .lkc svg{width:11px;height:11px;stroke:#14151b!important}
+.skv .ycoin{width:16px;height:16px;font-size:10px}
+.spill{display:flex;align-items:center;gap:10px;width:232px;margin:16px auto 0;background:#2a2c38;border:1px solid #3a3d48;border-radius:22px;padding:7px 8px}
+.spill .eu{width:32px;height:32px;border-radius:50%;background:#3c404d;display:grid;place-items:center;font-weight:800;font-size:17px;flex:none}
+.spill label{flex:1;min-width:0;display:grid}.spill label small{color:#9aa0ad;font-size:12px}
+.spill input{background:none;border:0;color:#fff;font-weight:700;font-size:15px;padding:0;width:100%;outline:none}
+.spill .pen{width:30px;height:30px;border-radius:50%;background:#14151b;display:grid;place-items:center;flex:none}
+.spill .pen svg{width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.sfoot{margin-top:auto;padding:16px 0 calc(24px + env(safe-area-inset-bottom,0px))}
+.sgo{display:block;width:100%;background:#0f9d2e;color:#fff;font-weight:700;font-size:17px;padding:15px}
+.ssal{text-align:center;margin:18px 0 0;font-size:15px}.ssal b{color:#43c06a;font-weight:500}
+.ssal .gcoin{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:#43c06a;color:#14151b;font-size:10px;font-weight:900;vertical-align:-2px;margin-left:4px}
 img.crest{width:100%;height:auto;display:block;filter:drop-shadow(0 1px 1px rgba(0,0,0,.5))}
 img.crest.dk{filter:drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff)}
 .tm img.crest,.srow small img.crest{display:inline-block;width:auto;height:1.25em;vertical-align:-.3em;margin-right:4px}
@@ -494,9 +519,9 @@ function pcard(id, mode, item) {
     btn = mine ? `<button class="abtn sm mine" data-unlist="${id}">Retirar</button>` : `<button class="abtn sm ${my ? "mine" : ""}" data-bid="${id}">${my ? "Puja: " + eur(my) : "Pujar"}</button>`;
   } else {
     const listed = S.st.market.some(i => i.pid === id && i.seller === S.st.me);
-    mid = `<div class="ln"><span class="ck">${CHK}</span>${listed ? "En el mercado" : "Alineable"}</div><div class="rt">MEDIA: <b>${se.media.toFixed(2).replace(".", ",")}</b></div>
+    mid = `<div class="ln"><span class="ck">${CHK}</span>Alineable</div><div class="rt">MEDIA: <b>${se.media.toFixed(2).replace(".", ",")}</b></div>
       <div class="ln"><span class="coin">€</span>${eur(v)}</div><div class="rt">${trend}</div>`;
-    btn = `<button class="abtn sm" data-acts="${id}">Acciones</button>`;
+    btn = listed ? `<button class="abtn sm" data-unlist="${id}">Quitar</button>` : `<button class="abtn sm" data-acts="${id}">Acciones</button>`;
   }
   return `<div class="pcard"><button class="ph" data-ficha="${id}" aria-label="Ver ficha de ${esc(p.n)}">${shirt(p, 70)}${inL ? `<span class="inxi">${CHK}</span>` : ""}<span class="tm">${crest(p.t)}${esc(team(p.t).short)}</span></button><div class="bd">
     <button class="tt" data-ficha="${id}"><span class="pos ${posOf(id)}">${posOf(id)}</span><b>${esc(p.n)}</b></button><div class="big">PFSY<b>${se.pf}</b></div>
@@ -751,6 +776,7 @@ function renderSheet() {
   let body = "";
   if (sh.t === "ficha") body = fichaView(sh.id);
   else if (sh.t === "ofr") body = ofrView(sh);
+  else if (sh.t === "sell") body = sellView(sh.id);
   else if (sh.t === "pick") {
     const l = myLineup(), cur_ = l.s[sh.idx], opts = mySquad().filter(id => posOf(id) === sh.pos && (!l.s.includes(id) || id === cur_));
     body = `<h3>Elige ${POSN[sh.pos].toLowerCase()}</h3>${opts.length ? opts.map(id => `<button class="opt" data-pick="${id}"><b>${esc(PL(id).n)}${id === cur_ ? " ✓" : ""}</b><span>${esc(team(PL(id).t).short)} · ${seasonOf(id).pf} pts</span></button>`).join("") : `<p class="note">No tienes ${POSN[sh.pos].toLowerCase()}s libres. Puja en el Mercado.</p>`}
@@ -764,6 +790,9 @@ function renderSheet() {
     const id = sh.id, p = PL(id), mine = S.st.team.squad.includes(id), listed = S.st.market.some(i => i.pid === id && i.seller === S.st.me);
     const own = ownerOf(id), ci = clauseInfo(id), inMk = S.st.market.find(i => i.pid === id && i.seller !== S.st.me);
     const status = own ? (own === S.st.me ? "En tu equipo" : "Es de " + teamName(own)) : inMk ? "En el mercado" : "Libre (LIGA)";
+    if (mine && !sh.raise && !sh.confirm) { const no = offersFor(id).length;
+      sh.ios = 1; body = `<div class="iosm">${listed ? `<button data-unlist="${id}">Quitar del mercado</button>` : `<button data-act="sellpage">Añadir al mercado</button>`}${no ? `<button data-ofr="${id}">Ofertas (${no})</button>` : ""}${ci ? `<button data-act="raiseask">Subir cláusula</button>` : ""}<button data-close="1">Cerrar</button></div>`; }
+    else { sh.ios = 0;
     body = `<h3>${esc(p.n)}</h3><p class="note" style="margin-top:-4px">${esc(status)} · ${esc(team(p.t).name)}</p>` + (mine ? `
       ${listed ? `<button class="opt" data-unlist="${id}"><b>Quitar del mercado</b></button>` : `<button class="opt" data-act="listask"><b>Poner en el mercado</b><span>pujan los demás y LIGA te hace una oferta cada día</span></button>`}
       ${offIn().filter(o => o.pid === id).map(o => offRow(o, 1)).join("")}
@@ -779,7 +808,7 @@ function renderSheet() {
         return sh.mof ? `<div class="fld"><label for="mofv">Tu oferta a ${esc(teamName(own))} (€, mínimo su valor). Tu saldo: ${eur(S.st.team.money)} €</label><input id="mofv" class="inp" type="number" min="${val(id)}" step="100000" value="${mo ? mo.amount : val(id)}"></div><button class="abtn" data-act="mofok">Enviar oferta</button>`
           : `<button class="opt" data-act="mofask"><b>${mo ? "Cambiar oferta (" + eur(mo.amount) + " €)" : "Hacer oferta a " + esc(teamName(own))}</b><span>si la acepta, pasa a tu equipo al momento</span></button>${mo ? `<button class="opt" data-mcancel="${id}"><b>Retirar oferta</b></button>` : ""}`; })() : ""}
       ${!inMk && !ci ? '<p class="note">No está en el mercado. Si sale, podrás pujar por él.</p>' : ""}`) +
-      (S.st.admin ? `<div class="fld" style="margin-top:10px"><label for="setpos">Posición (admin)</label><select class="form" id="setpos" data-pid="${id}">${["POR", "DEF", "CEN", "DEL"].map(x => `<option ${x === posOf(id) ? "selected" : ""}>${x}</option>`).join("")}</select></div>` : "");
+      (S.st.admin ? `<div class="fld" style="margin-top:10px"><label for="setpos">Posición (admin)</label><select class="form" id="setpos" data-pid="${id}">${["POR", "DEF", "CEN", "DEL"].map(x => `<option ${x === posOf(id) ? "selected" : ""}>${x}</option>`).join("")}</select></div>` : ""); }
   } else if (sh.t === "search") {
     body = `<h3>Buscar jugador</h3><div class="srch"><input id="sq" class="inp" type="search" placeholder="Nombre, apellido o equipo" value="${esc(sh.q || "")}" autocomplete="off" autocorrect="off" spellcheck="false"></div><div id="sres">${searchResults(sh.q)}</div>`;
   } else if (sh.t === "rival") {
@@ -788,10 +817,21 @@ function renderSheet() {
       sq.map(id => `<button class="opt" data-ficha="${id}"><b><span class="pos ${posOf(id)}">${posOf(id)}</span> ${esc(PL(id).n)}</b><span>${esc(team(PL(id).t).short)} · ${eur(val(id))} €</span></button>`).join("");
   }
   const sc = el.querySelector(".in,.page"), scroll = sc ? sc.scrollTop : 0;
-  el.innerHTML = sh.t === "ficha" || sh.t === "ofr" ? `<div class="page">${body}</div>` : `<div class="sheet" data-close="1"><div class="in${sh.t === "search" ? " tall" : ""}">${body}<button class="gbtn" data-close="1" style="width:100%;margin-top:10px">Cerrar</button></div></div>`;
+  el.innerHTML = sh.t === "ficha" || sh.t === "ofr" || sh.t === "sell" ? `<div class="page">${body}</div>` : sh.ios ? `<div class="sheet ios" data-close="1">${body}</div>` : `<div class="sheet" data-close="1"><div class="in${sh.t === "search" ? " tall" : ""}">${body}<button class="gbtn" data-close="1" style="width:100%;margin-top:10px">Cerrar</button></div></div>`;
   if (sh.keep) el.querySelector(".in,.page").scrollTop = scroll;
   const js = el.querySelector(".jstrip"), on = js && js.querySelector(".jbox.on"); if (on) js.scrollLeft = on.offsetLeft - js.clientWidth / 2 + on.offsetWidth / 2;
   if (sh.t === "search" && !sh.keep) { const i = document.getElementById("sq"); i.focus(); }
+}
+
+// Fijar el precio de venta (como LaLiga Fantasy)
+const fmtN = v => String(Math.max(0, Math.round(v || 0))).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+function sellView(id) {
+  const p = PL(id), ci = clauseInfo(id), v = val(id);
+  return `<div class="sell"><div class="shd"><button data-back="1" aria-label="Volver"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><h1>Fijar el precio de venta</h1><span></span></div>
+    <div class="sav">${shirt(p, 100)}</div>
+    <div class="skv"><i class="ycoin">€</i><span>Valor de mercado</span><b>${eur(v)}</b>${ci ? `<i class="lkc">${LOCK}</i><span>Valor de cláusula</span><b>${eur(ci.c)}</b>` : ""}</div>
+    <div class="spill"><span class="eu">€</span><label for="listv"><small>Precio de venta</small><input id="listv" type="text" inputmode="numeric" autocomplete="off" value="${fmtN(v)}"></label><button class="pen" data-act="pen" aria-label="Editar precio"><svg viewBox="0 0 24 24"><path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/></svg></button></div>
+    <div class="sfoot"><button class="sgo" data-act="listok">Añadir al mercado</button><p class="ssal">Tu saldo: <b>${eur(S.st.team.money)}</b><i class="gcoin">€</i></p></div></div>`;
 }
 
 /* ---------- eventos ---------- */
@@ -863,12 +903,16 @@ document.addEventListener("click", async e => {
   if (a === "raiseask") { S.sheet.raise = true; return renderSheet(); }
   if (a === "raiseok") { const id = S.sheet.id, v = +document.getElementById("raisev").value; S.sheet = S.sheet.prev || null; return act("raiseClause", { pid: id, amount: v }, "Cláusula subida"); }
   if (a === "listask") { S.sheet.list = true; return renderSheet(); }
-  if (a === "listok") { const id = S.sheet.id, v = +document.getElementById("listv").value; S.sheet = S.sheet.prev || null; return act("list", { pid: id, price: v }, "En el mercado. Mira la oferta de LIGA en Acciones"); }
+  if (a === "sellpage") { S.sheet = { t: "sell", id: S.sheet.id, prev: S.sheet.prev }; return renderSheet(); }
+  if (a === "pen") { const i = document.getElementById("listv"); i.focus(); i.select(); return; }
+  if (a === "listok") { const id = S.sheet.id, v = +String(document.getElementById("listv").value).replace(/\D/g, "");
+    if (!(v >= val(id))) return toast("El precio mínimo es su valor: " + eur(val(id)) + " €.");
+    const prev = S.sheet.prev || null; S.sheet = prev; if (await act("list", { pid: id, price: v })) toastOk("Has añadido a " + PL(id).n + " al mercado correctamente"); else renderSheet(); return; }
   if (a === "pub") { const J = S.imp; if (!J || J.err) return; b.disabled = true; if (await act("importJornada", { jornada: { n: J.n, matches: J.matches, st: J.st } }, "Puntos de la J" + J.n + " publicados")) { S.imp = null; render(); } else b.disabled = false; return; }
 });
 function confirm2(b) { if (b.dataset.sure) return true; b.dataset.sure = "1"; b.textContent = "¿Seguro?"; return false; }
 document.addEventListener("submit", e => { if (e.target.id === "auform") { e.preventDefault(); auth(S.authTab === "up" ? "up" : "in"); } });
-document.addEventListener("input", e => { if (e.target.id === "sq") { S.sheet.q = e.target.value; const r = document.getElementById("sres"); if (r) r.innerHTML = searchResults(S.sheet.q); } });
+document.addEventListener("input", e => { if (e.target.id === "listv" && S.sheet && S.sheet.t === "sell") { e.target.value = fmtN(+e.target.value.replace(/\D/g, "")); return; } if (e.target.id === "sq") { S.sheet.q = e.target.value; const r = document.getElementById("sres"); if (r) r.innerHTML = searchResults(S.sheet.q); } });
 document.addEventListener("change", async e => {
   if (e.target.id === "form") { const f = e.target.value, l = myLineup(), rows = GAME.FORMS[f];
     const byPos = { POR: [], DEF: [], CEN: [], DEL: [] }; l.s.forEach(id => { if (id && PL(id)) byPos[posOf(id)].push(id); });
