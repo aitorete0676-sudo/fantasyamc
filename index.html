@@ -136,6 +136,32 @@ select.form{background:var(--card);color:var(--fg);border:0;padding:10px 12px;fo
 .ofb{grid-column:1/-1;display:flex;gap:8px;justify-content:flex-end}
 .abtn.sm{padding:8px 16px;width:auto}
 .ofban{display:block;width:100%;text-align:left;background:var(--accent);color:#fff;font-weight:700;border-radius:10px;padding:12px 14px;margin-bottom:10px}
+.cvt{display:grid;grid-template-columns:1fr 1fr;border:1px solid #343743;padding:4px;margin:4px 0 12px}
+.cvt button{display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 6px;font-size:17px;font-weight:600;color:#fff;border-radius:20px}
+.cvt button.on{background:#2c2f3a}
+.cvt .ar{width:20px;height:20px;border-radius:50%;display:inline-block;position:relative}
+.cvt .ar.dn{background:#3b5bdb}.cvt .ar.up{background:#ee5a4b}
+.cvt .ar::after{content:"";position:absolute;left:5px;border:5px solid transparent}
+.cvt .ar.dn::after{top:7px;border-top-color:#fff}.cvt .ar.up::after{top:2px;border-bottom-color:#fff}
+.vacio{text-align:center;padding:40px 16px}.vacio .sb{width:170px;height:auto}.vacio p{margin-top:28px;font-size:16px}
+.lkg .ic{width:18px;height:18px;margin-right:8px;vertical-align:-3px}
+.ftit{font-size:18px;font-weight:700;margin:0}
+.ofw{padding:14px 10px 30px}
+.ofc{display:grid;grid-template-columns:auto 1fr auto;gap:4px 12px;background:#2a2c38;border-radius:4px;padding:12px;margin-top:14px;align-items:start}
+.oav{width:54px;height:54px;border-radius:50%;background:#3c404d;display:grid;place-items:center;font-weight:900;font-size:22px;grid-row:span 2}
+.oav.liga{background:#fff}.oav svg{width:34px;height:34px}
+.ot b{display:block;font-size:15px}.oam{display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px;margin-top:6px}
+.ycoin{width:18px;height:18px;border-radius:50%;background:#c9a227;color:#14151b;font-style:normal;font-size:11px;font-weight:900;display:grid;place-items:center}
+.otm{color:var(--muted);font-size:13px}
+.obt{grid-column:2/-1;display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+.orej{border:1px solid #9aa0ad;padding:10px;font-weight:700}.oacc{background:#e5534b;color:#fff;padding:10px;font-weight:700}
+.oacc:disabled{opacity:.5}
+.cfm{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.55);display:grid;place-items:center;padding:16px}
+.cfb{background:#fff;color:#14151b;border-radius:14px;padding:22px 18px 18px;width:100%;max-width:360px}
+.cfb h3{font-size:20px;margin:0 0 16px}.cfb p{color:#333;font-size:15px;line-height:1.35;margin:0 0 18px}.cfb p b{color:#14151b}
+.cfr{display:grid;grid-template-columns:1fr 1fr;gap:10px}.cfr button{background:#eee;border-radius:22px;padding:12px;font-size:16px;color:#14151b}
+.toast.ok{background:#43a537;color:#fff;font-weight:500;display:flex;justify-content:space-between;align-items:center;gap:16px;width:calc(100% - 32px);padding:14px 16px}
+.toast.ok button{color:#fff;font-size:22px;line-height:1}
 img.crest{width:100%;height:auto;display:block;filter:drop-shadow(0 1px 1px rgba(0,0,0,.5))}
 img.crest.dk{filter:drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff)}
 .tm img.crest,.srow small img.crest{display:inline-block;width:auto;height:1.25em;vertical-align:-.3em;margin-right:4px}
@@ -534,15 +560,47 @@ function offerBtn(id, confirm) {
   return confirm ? `<button class="opt red" data-act="offerok" data-pid="${id}"><b>Confirmar: vender a LIGA por ${eur(it.offer)} €</b></button>`
     : `<button class="opt" data-act="offerask" data-pid="${id}"><b>Oferta de LIGA: ${eur(it.offer)} €</b><span>${tag} · cambia cada día a las ${esc(S.st.close)}</span></button>`;
 }
+// Tarjeta de Mis operaciones / Ofertas recibidas (como LaLiga Fantasy: cláusula con candado, Valor/Precio, reloj y botón)
+function vcard(id, item, btn) {
+  const p = PL(id), se = seasonOf(id), ci = clauseInfo(id);
+  return `<div class="mc"><button class="ph" data-ficha="${id}" aria-label="Ver ficha de ${esc(p.n)}">${shirt(p, 80)}<span class="tmb">${crest(p.t)}</span></button>
+    <div class="bd"><button class="r1" data-ficha="${id}"><span class="pos ${posOf(id)}">${posOf(id)}</span><b>${esc(p.n)}</b><span class="pf">PFSY<b>${se.pf}</b></span></button>
+      <div class="r2"><span><span class="ck">${CHK}</span>Alineable</span><span class="kv">Valor<em>${eur(val(id))}</em></span></div>
+      <div class="r2"><span>${ci ? `<span class="lkg">${LOCK}</span>${eur(ci.c)}` : ""}</span>${item ? `<span class="kv">Precio<b>${eur(item.price)}</b></span>` : ""}</div>
+      <div class="r3"><span>${item ? `${CLOCK}<span data-ends="${item.ends}">${hms(item.ends - now())}</span>` : ""}</span>${btn}</div></div></div>`;
+}
+const myList = id => S.st.market.find(i => i.pid === id && i.seller === S.st.me);
+const offersFor = id => { const it = myList(id), o = offIn().filter(x => x.pid === id).map(x => ({ who: x.from, name: teamName(x.from), amount: x.amount, at: x.at }));
+  return (it && it.offer ? [{ who: "LIGA", name: "LALIGA", amount: it.offer, ends: it.ends }] : []).concat(o); };
+const SELLBUY = `<svg class="sb" viewBox="0 0 200 180"><path d="M120 50h30v-18l32 28-32 28V70h-30z" fill="#8b5cf6"/><circle cx="70" cy="58" r="44" fill="#8b5cf6"/><circle cx="70" cy="58" r="34" fill="#fff"/><text x="70" y="68" text-anchor="middle" font-size="26" font-weight="900" fill="#14151b">SELL</text><path d="M48 36l44 44M92 36l-44 44" stroke="#e5534b" stroke-width="4"/>
+  <path d="M84 120h30v18l-32-28 32-28v18h-30z" fill="#ee5a4b" transform="translate(-30 0)"/><circle cx="130" cy="122" r="44" fill="#ee5a4b"/><circle cx="130" cy="122" r="34" fill="#fff"/><text x="130" y="132" text-anchor="middle" font-size="26" font-weight="900" fill="#14151b">BUY</text></svg>`;
 function opsView() {
-  const bids = Object.entries(S.st.myBids || {}), lists = S.st.market.filter(i => i.seller === S.st.me);
-  const mine = new RegExp("^(" + [S.st.me, S.st.team.name].filter(Boolean).map(x => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ") ha");
-  const hist = S.st.log.filter(x => x.type === "market" && mine.test(x.text));
-  return (offIn().length ? `<div class="box"><h3>Ofertas recibidas</h3>${offIn().map(o => offRow(o, 1)).join("")}${locked() ? '<p class="note">Durante la jornada no se pueden aceptar.</p>' : ""}</div>` : "") +
-    (offOut().length ? `<div class="box"><h3>Ofertas enviadas</h3>${offOut().map(o => offRow(o, 0)).join("")}</div>` : "") +
-    `<div class="box"><h3>Mis pujas</h3>${bids.length ? `<table>${bids.map(([id, a]) => `<tr><td><button data-ficha="${id}">${esc(PL(id).n)}</button></td><td><button class="gbtn" data-bid="${id}">${eur(a)} €</button></td></tr>`).join("")}</table>` : "<p>No tienes pujas activas.</p>"}</div>
-    <div class="box"><h3>En venta</h3>${lists.length ? `<table>${lists.map(i => `<tr><td><button data-ficha="${i.pid}">${esc(PL(i.pid).n)}</button><br><small class="note">desde ${eur(i.price)} €</small></td><td>${i.offer ? `<button class="gbtn" data-acts="${i.pid}">LIGA ofrece ${eur(i.offer)} €</button>` : ""}</td></tr>`).join("")}</table>` : "<p>No tienes jugadores en el mercado.</p>"}</div>
-    ${hist.map(x => `<div class="act"><div class="h"><b>Operación</b><span>${fmtD(x.at)}</span></div><p>${esc(x.text)}</p></div>`).join("")}`;
+  const tab = S.opsTab || "venta";
+  const tg = `<div class="cvt"><button data-opt="compra" class="${tab === "compra" ? "on" : ""}"><i class="ar dn"></i>Compra</button><button data-opt="venta" class="${tab === "venta" ? "on" : ""}"><i class="ar up"></i>Venta</button></div>`;
+  if (tab === "venta") {
+    const ids = [...new Set(S.st.market.filter(i => i.seller === S.st.me).map(i => i.pid).concat(offIn().map(o => o.pid)))].filter(id => PL(id) && S.st.team.squad.includes(id));
+    return tg + (ids.length ? ids.map(id => vcard(id, myList(id), `<button class="abtn" data-ofr="${id}">Ofertas (${offersFor(id).length})</button>`)).join("")
+      : `<div class="vacio">${SELLBUY}<p>No has recibido ofertas de otros mánager</p></div>`);
+  }
+  const bids = S.st.market.filter(i => S.st.myBids[i.pid] && PL(i.pid)), outs = offOut().filter(o => PL(o.pid));
+  return tg + (bids.length || outs.length ? bids.map(i => vcard(i.pid, i, `<button class="abtn" data-bid="${i.pid}">Puja ${eur(S.st.myBids[i.pid])}</button>`)).join("") +
+      outs.map(o => vcard(o.pid, null, `<button class="abtn" data-acts="${o.pid}">Oferta ${eur(o.amount)}</button>`)).join("")
+    : `<div class="vacio">${SELLBUY}<p>No has hecho ofertas a otros mánager</p></div>`);
+}
+// Pantalla "Ofertas recibidas" de un jugador
+function ofrView(sh) {
+  const id = sh.id, it = myList(id), offs = offersFor(id);
+  const card = o => `<div class="ofc"><span class="oav ${o.who === "LIGA" ? "liga" : ""}">${o.who === "LIGA" ? '<svg viewBox="0 0 40 40"><path d="M10 13l9-6-5 12h9l-11 15 3-11h-7z" fill="#ee5a4b"/></svg>' : esc((o.name || "?")[0].toUpperCase())}</span>
+    <div class="ot"><b>Oferta de compra de ${esc(o.name)}</b><span class="oam"><i class="ycoin">€</i>${eur(o.amount)}</span></div>
+    <span class="otm">${o.ends ? `<span data-ends="${o.ends}">${hms(o.ends - now())}</span>` : fmtD(o.at)}</span>
+    <div class="obt"><button class="orej" data-orej="${esc(o.who)}">Rechazar</button><button class="oacc" data-oacc="${esc(o.who)}" ${locked() ? "disabled" : ""}>Aceptar</button></div></div>`;
+  const cf = sh.cf ? offs.find(o => o.who === sh.cf) : null;
+  return `<div class="fx"><div class="fbar"><button class="back" data-back="1" aria-label="Volver"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><h1 class="ftit">Ofertas recibidas</h1><span style="width:44px"></span></div></div>
+    <div class="ofw">${vcard(id, it, `<button class="abtn" data-acts="${id}">Opciones</button>`)}
+    ${offs.length ? offs.map(card).join("") : '<p class="note" style="text-align:center;margin-top:24px">No tienes ofertas por este jugador.</p>'}
+    ${locked() ? '<p class="note" style="text-align:center">Durante la jornada no se pueden aceptar ofertas.</p>' : ""}</div>
+    ${cf ? `<div class="cfm" data-cfno="1"><div class="cfb"><h3>Aceptar oferta</h3><p>Vas a aceptar la oferta realizada por <b>${esc(cf.name)}</b> de <b>${eur(cf.amount)} €</b> por <b>${esc(PL(id).n)}</b></p>
+      <div class="cfr"><button data-cfno="1">Cancelar</button><button data-cfok="1">Aceptar</button></div></div></div>` : ""}`;
 }
 function histView() {
   const h = S.st.log.filter(x => x.type === "market");
@@ -709,6 +767,7 @@ function renderSheet() {
   const el = document.getElementById("sheet"), sh = S.sheet; if (!sh || S.store !== "ok") { el.innerHTML = ""; return; }
   let body = "";
   if (sh.t === "ficha") body = fichaView(sh.id);
+  else if (sh.t === "ofr") body = ofrView(sh);
   else if (sh.t === "pick") {
     const l = myLineup(), cur_ = l.s[sh.idx], opts = mySquad().filter(id => posOf(id) === sh.pos && (!l.s.includes(id) || id === cur_));
     body = `<h3>Elige ${POSN[sh.pos].toLowerCase()}</h3>${opts.length ? opts.map(id => `<button class="opt" data-pick="${id}"><b>${esc(PL(id).n)}${id === cur_ ? " ✓" : ""}</b><span>${esc(team(PL(id).t).short)} · ${seasonOf(id).pf} pts</span></button>`).join("") : `<p class="note">No tienes ${POSN[sh.pos].toLowerCase()}s libres. Puja en el Mercado.</p>`}
@@ -746,17 +805,19 @@ function renderSheet() {
       sq.map(id => `<button class="opt" data-ficha="${id}"><b><span class="pos ${posOf(id)}">${posOf(id)}</span> ${esc(PL(id).n)}</b><span>${esc(team(PL(id).t).short)} · ${eur(val(id))} €</span></button>`).join("");
   }
   const sc = el.querySelector(".in,.page"), scroll = sc ? sc.scrollTop : 0;
-  el.innerHTML = sh.t === "ficha" ? `<div class="page">${body}</div>` : `<div class="sheet" data-close="1"><div class="in${sh.t === "search" ? " tall" : ""}">${body}<button class="gbtn" data-close="1" style="width:100%;margin-top:10px">Cerrar</button></div></div>`;
+  el.innerHTML = sh.t === "ficha" || sh.t === "ofr" ? `<div class="page">${body}</div>` : `<div class="sheet" data-close="1"><div class="in${sh.t === "search" ? " tall" : ""}">${body}<button class="gbtn" data-close="1" style="width:100%;margin-top:10px">Cerrar</button></div></div>`;
   if (sh.keep) el.querySelector(".in,.page").scrollTop = scroll;
   const js = el.querySelector(".jstrip"), on = js && js.querySelector(".jbox.on"); if (on) js.scrollLeft = on.offsetLeft - js.clientWidth / 2 + on.offsetWidth / 2;
   if (sh.t === "search" && !sh.keep) { const i = document.getElementById("sq"); i.focus(); }
 }
 
 /* ---------- eventos ---------- */
-let toastT; function toast(m) { const t = document.getElementById("toast"); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2800); }
+let toastT; function toastOk(m) { toast(m); const t = document.getElementById("toast"); t.classList.add("ok"); t.innerHTML = `<span>${esc(m)}</span><button data-tx="1" aria-label="Cerrar">×</button>`; }
+function toast(m) { const t = document.getElementById("toast"); t.classList.remove("ok"); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2800); }
 function saveLineup(l) { return act("lineup", { f: l.f, s: l.s, c: l.c }); }
 document.addEventListener("click", async e => {
   const b = e.target.closest("button,[data-close]"); if (!b) return; const d = b.dataset;
+  if (d.tx) { document.getElementById("toast").hidden = true; return; }
   if (d.close) { if (e.target !== b) return; S.sheet = (S.sheet && S.sheet.prev) || null; return render(); }
   if (d.back) { S.sheet = (S.sheet && S.sheet.prev) || null; return render(); }
   if (d.authTab) { S.authTab = d.authTab; S.authMsg = ""; return render(); }
@@ -778,6 +839,14 @@ document.addEventListener("click", async e => {
   if (d.mcancel) { return act("mgrCancel", { pid: d.mcancel }, "Oferta retirada"); }
   if (d.macc) { const [pid, from] = d.macc.split("|"); S.sheet = null; return act("mgrAccept", { pid, from }, PL(pid).n + " vendido a " + teamName(from)); }
   if (d.mrej) { const [pid, from] = d.mrej.split("|"); return act("mgrReject", { pid, from }, "Oferta rechazada"); }
+  if (d.opt) { S.opsTab = d.opt; return render(); }
+  if (d.ofr) { S.sheet = { t: "ofr", id: d.ofr }; return renderSheet(); }
+  if (d.oacc) { S.sheet.cf = d.oacc; S.sheet.keep = 1; return renderSheet(); }
+  if (d.cfno) { if (e.target !== b && !b.matches("button")) return; S.sheet.cf = null; return renderSheet(); }
+  if (d.cfok) { const sh = S.sheet, pid = sh.id, who = sh.cf; S.sheet = null; S.opsTab = "venta";
+    const ok = who === "LIGA" ? await act("acceptOffer", { pid }) : await act("mgrAccept", { pid, from: who }); if (ok) toastOk("Oferta aceptada"); return; }
+  if (d.orej) { const pid = S.sheet.id, who = d.orej; S.sheet.keep = 1;
+    const ok = who === "LIGA" ? await act("rejectOffer", { pid }) : await act("mgrReject", { pid, from: who }); if (ok) toastOk("Oferta rechazada"); return; }
   if (d.unlist) { S.sheet = (S.sheet && S.sheet.prev) || null; return act("unlist", { pid: d.unlist }, "Retirado del mercado"); }
   if (d.unpub) { if (!confirm2(b)) return; return act("unpublish", { n: +d.unpub }, "Jornada quitada"); }
   if (d.slot != null && b.classList.contains("slot")) {

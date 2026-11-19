@@ -344,10 +344,14 @@ module.exports = async (req, res) => {
       if (mine.squad.length >= G.MAX_SQUAD) return send(400, { error: "Tienes el máximo de " + G.MAX_SQUAD + " jugadores." });
       await redis("HSET", k("bids:") + b.pid, me.name, JSON.stringify({ amount, at: Date.now() })); return send(200, { ok: true });
     }
-    if (a === "acceptOffer" || a === "list" || a === "unlist") {
+    if (a === "acceptOffer" || a === "rejectOffer" || a === "list" || a === "unlist") {
       if (!mine.squad.includes(b.pid)) return send(400, { error: "Ese jugador no es tuyo." });
       const pr = await getPrices(), v = pr.v[b.pid], market = (await getJ(k("market"))) || { day: G.day(Date.now()), items: [] };
       const inL = cur.lock && locked && G.lineupFor(mine, cur.n).s.includes(b.pid), it = market.items.find(i => i.pid === b.pid && i.seller === me.name);
+      if (a === "rejectOffer") {   // rechazas la oferta de LIGA: mañana te hará otra
+        if (!it || !it.offer) return send(400, { error: "No tienes ninguna oferta de LIGA por este jugador." });
+        it.offer = 0; await setJ(k("market"), market); return send(200, { ok: true });
+      }
       if (a === "acceptOffer") {
         if (!it || !it.offer) return send(400, { error: "No tienes ninguna oferta de LIGA por este jugador." });
         if (inL) return send(400, { error: "Está en tu alineación de una jornada en juego." });
