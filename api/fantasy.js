@@ -99,7 +99,8 @@ async function tick(k) {
   const today = G.day(Date.now()), pr = await priceTick();
   let market = await getJ(k("market"));
   const next = market ? (market.next || (market.day === today ? G.nextMidnight(Date.now()) : 0)) : 0;   // los mercados de antes no tenían "next"
-  if (market && next > Date.now()) return;
+  const daily = !market || next <= Date.now(), due = market && market.items.some(it => it.seller !== "LIGA" && it.ends <= Date.now());
+  if (!daily && !due) return;   // a las 16:00 cambia el mercado; los jugadores de los mánagers se van justo a las 48 h
   if (!(await redis("SET", k("lock:tick"), "1", "NX", "EX", 30))) return;
   try {
     const owner = (await redis("HGETALL", k("owner"))) || [], own = {}; for (let i = 0; i < owner.length; i += 2) own[owner[i]] = owner[i + 1];
@@ -108,7 +109,6 @@ async function tick(k) {
       const keep = [];
       for (const it of market.items) {
         if (it.ends > Date.now()) { keep.push(it); continue; }
-        const relist = () => { if (it.seller !== "LIGA") keep.push({ ...it, price: Math.max(it.price, pr.v[it.pid] || 0), ends: G.nextClose(G.nextClose(Date.now(), k.hm), k.hm) }); };
         const bids = await hgetall(k("bids:") + it.pid); await redis("DEL", k("bids:") + it.pid);
         const list = Object.entries(bids).map(([u, b]) => ({ u, ...b })).sort((a, b) => b.amount - a.amount || a.at - b.at);
         if (list.length) await redis("HINCRBY", "dem", it.pid, list.length);
@@ -124,9 +124,10 @@ async function tick(k) {
           await log(k, "market", `${t.name || b.u} ha comprado a ${PL[it.pid].n} a ${it.seller === "LIGA" ? "LIGA" : it.seller} por ${b.amount.toLocaleString("es-ES")}€` + (list.length > 1 ? ` (${list.length} pujas)` : ""));
           done = true; break;
         }
-        if (!done && it.seller !== "LIGA") { await redis("HINCRBY", "uns", it.pid, 1); relist(); }   // sigue a la venta con una oferta nueva de LIGA
+        if (!done && it.seller !== "LIGA") await redis("HINCRBY", "uns", it.pid, 1);   // sin comprador: sale del mercado y sigue en su equipo
       }
       market.items = keep;
+      if (!daily) { await setJ(k("market"), market); return; }
       // LIGA hace su oferta diaria (a las 16:00) por cada jugador que los mánagers tienen a la venta
       for (const it of market.items) if (it.seller !== "LIGA") it.offer = ligaOffer(pr.v[it.pid] || it.price);
     }
@@ -372,7 +373,7 @@ module.exports = async (req, res) => {
       } else if (a === "list") {
         if (it || market.items.some(i => i.pid === b.pid)) return send(400, { error: "Ya está en el mercado." });
         const price = Math.max(v, Math.round(+b.price || v));
-        market.items.push({ pid: b.pid, seller: me.name, price, ends: G.nextClose(G.nextClose(Date.now(), k.hm), k.hm), offer: 0 }); await setJ(k("market"), market);   // LIGA ofertará a las 16:00
+        market.items.push({ pid: b.pid, seller: me.name, price, ends: Date.now() + G.MARKET_DAYS * 86400e3, offer: 0 }); await setJ(k("market"), market);   // 48 h exactas desde que lo pones; LIGA ofertará a las 16:00
       } else { market.items = market.items.filter(i => i !== it); await setJ(k("market"), market); await redis("DEL", k("bids:") + b.pid); }
       return send(200, { ok: true });
     }
