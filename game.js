@@ -12,7 +12,7 @@
     MAX_SQUAD: 20,
     DAILY: 100000,             // recompensa diaria
     PER_POINT: 100000,         // € por punto en la jornada
-    MARKET_SIZE: 12,
+    MARKET_SIZE: 12, MARKET_HM: "16:00", MARKET_DAYS: 2,
     SHIELD_DAYS: 7,            // días de blindaje: después de llegar a un equipo no se le puede pagar la cláusula
     CLAUSE_X: 2,               // subir la cláusula: cada € pagado la sube 2 €           // jugadores de la liga que salen cada día al mercado
     GOL: { POR: 10, DEF: 6, CEN: 5, DEL: 4 },
@@ -134,12 +134,25 @@
     const l = k != null ? L[k] : null;
     return l ? { f: R.FORMS[l.f] ? l.f : "4-4-2", s: (l.s || []).slice(0, 11), c: l.c || null } : { f: "4-4-2", s: Array(11).fill(null), c: null };
   }
-  // Puntos de un equipo en una jornada. null = no puntúa (alineación incompleta)
+  // Día de la semana en Madrid (0 domingo … 5 viernes)
+  const wday = t => new Date(day(t) + "T12:00:00Z").getUTCDay();
+  // Clausulazos cerrados todo el viernes (de jueves 24:00 a viernes 24:00, hora de Madrid)
+  const clauseBlocked = t => wday(t) === 5;
+  // Cierre de alineaciones: viernes a las 21:00 de la semana de la jornada (o antes, si algún partido empieza antes)
+  function jornadaLock(kicks) {
+    if (!kicks.length) return null; const first = Math.min(...kicks);
+    let t = first; while (wday(t) !== 5) t -= 24 * 3600e3;
+    return Math.min(first, madridTs(day(t) + "T21:00"));
+  }
+  // Puntos de un equipo en una jornada. null = no puntúa: alineación incompleta o saldo negativo al cierre (why = "inc" | "neg").
+  // Si hay foto del cierre (team.snap[n]) se usa esa: la plantilla que tenía a las 21:00 del viernes.
   function teamPoints(team, J, posOf) {
-    const l = lineupFor(team, J.n), ids = l.s.filter(Boolean);
-    if (ids.length < 11) return { total: null, l };
+    const sn = team && team.snap && team.snap[J.n];
+    const l = sn ? { f: sn.l.f, s: (sn.l.s || []).slice(0, 11), c: sn.l.c || null } : lineupFor(team, J.n), ids = l.s.filter(Boolean);
+    if (ids.length < 11) return { total: null, l, why: "inc" };
+    if (sn && sn.neg) return { total: null, l, why: "neg" };
     let total = 0; ids.forEach(id => { total += points(posOf(id), J, id) * (id === l.c ? 2 : 1); });
     return { total, l };
   }
-  return Object.assign(R, { madridHM, nextClose, PRICE_VER, mins, parseActa, rows, madridTs, teamResult, breakdown, points, baseValue, day, nextMidnight, lineupFor, teamPoints });
+  return Object.assign(R, { wday, clauseBlocked, jornadaLock, madridHM, nextClose, PRICE_VER, mins, parseActa, rows, madridTs, teamResult, breakdown, points, baseValue, day, nextMidnight, lineupFor, teamPoints });
 });
