@@ -298,7 +298,7 @@ module.exports = async (req, res) => {
     const me = await whoami(req);
     if (!me) return send(401, { error: "Sesión caducada. Vuelve a entrar." });
     const admin = me.admin || norm(process.env.ADMIN_USER) === me.name;
-    const MIGV = "2026-11-23c";   // subir esto al añadir una migración nueva; así no se comprueban todas en cada carga
+    const MIGV = "2026-11-23d";   // subir esto al añadir una migración nueva; así no se comprueban todas en cada carga
     const [leagues, migV] = await Promise.all([allLeagues(), redis("GET", "mig:ver")]);
     if (migV !== MIGV) {
     if (await redis("SET", "mig:clref", "1", "NX")) {   // una vez: se devuelve lo pagado por subir cláusulas y se deshace la subida
@@ -417,6 +417,13 @@ module.exports = async (req, res) => {
           for (const n of m[2].split(", ")) { const id = Object.keys(PL).find(i => PL[i].n === n && !(t.squad || []).includes(i)); if (!id || inMk.has(id) || (await redis("HGET", kk("owner"), id))) continue;
             t.squad.push(id); t.cl = t.cl || {}; t.since = t.since || {}; t.cl[id] = Math.round(((await getPrices()).v[id] || 0) * G.CLAUSE_START); t.since[id] = t.joined || Date.now(); await redis("HSET", kk("owner"), id, u); back.push(n); }
           if (back.length) { await setJ(kk("team:") + u, t); await log(kk, "info", `${t.name || u}: se le devuelven ${back.join(", ")}.`); } } }
+    }
+    if (await redis("SET", "mig:own2", "1", "NX")) {   // 2026-11-23: el índice de dueños se rehace con las plantillas reales (si no, las ofertas iban a quien ya no tenía al jugador)
+      for (const code of Object.keys(leagues)) { const kk = keysOf(code), own = {};
+        for (const u of (await redis("SMEMBERS", kk("users"))) || []) { const t = await getJ(kk("team:") + u); (t && t.squad || []).forEach(id => { if (!own[id]) own[id] = u; }); }
+        const arr = (await redis("HGETALL", kk("owner"))) || [], cur = {}; for (let i = 0; i < arr.length; i += 2) cur[arr[i]] = arr[i + 1];
+        for (const id of Object.keys(cur)) if (own[id] !== cur[id]) await redis("HDEL", kk("owner"), id);
+        for (const [id, u] of Object.entries(own)) if (cur[id] !== u) await redis("HSET", kk("owner"), id, u); }
     }
     if (await redis("SET", "mig:reset1", "1", "NX")) {   // Aitor (2026-11-23): Liga Almazora C desde cero: 11 jugadores (1-4-4-2) de ~100 M, nadie de más de 20 M, 150 M para fichar
       for (const k of ["mig:clref", "mig:own1", "mig:fill1", "mig:redeal1", "mig:redeal2", "mig:cl53"]) await redis("SET", k, "1");   // los arreglos anteriores ya no hacen falta
@@ -540,11 +547,12 @@ module.exports = async (req, res) => {
       const ow = await redis("HGET", k("owner"), pid);
       if (a === "mgrOffer") {
         if (!ow || ow === me.name) return send(400, { error: "Ese jugador no tiene dueño rival." });
+        const tow = await getJ(k("team:") + ow); if (!tow || !(tow.squad || []).includes(pid)) { await redis("HDEL", k("owner"), pid); return send(400, { error: "Ese jugador ya no está en ese equipo. Recarga." }); }
         const pr = await getPrices(), v = pr.v[pid] || 0, x = Math.round(+b.amount || 0);
         if (!(x >= v)) return send(400, { error: "La oferta no puede ser menor que su valor (" + v.toLocaleString("es-ES") + " €)." });
         if (x > mine.money) return send(400, { error: "No tienes tanto saldo." });
         await redis("HSET", k("offers"), pid + "|" + me.name, JSON.stringify({ pid, from: me.name, to: ow, amount: x, at: Date.now() }));
-        await log(k, "market", `${mine.name || me.name} ha hecho una oferta por ${PL[pid].n} a ${(await getJ(k("team:") + ow) || {}).name || ow}`);
+        await log(k, "market", `${mine.name || me.name} ha hecho una oferta por ${PL[pid].n} a ${tow.name || ow}`);
         return send(200, { ok: true });
       }
       if (a === "mgrCancel") { await redis("HDEL", k("offers"), pid + "|" + me.name); return send(200, { ok: true }); }
