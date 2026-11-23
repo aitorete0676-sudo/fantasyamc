@@ -158,7 +158,8 @@ select.form{background:var(--card);color:var(--fg);border:0;padding:10px 12px;fo
 .rv .rnm small{display:flex;align-items:center;gap:5px;color:#9aa0ad;font-size:12px}.rv .rnm small svg{width:12px;height:12px;fill:#9aa0ad}
 .rv .rpt{font-weight:800;font-size:16px;white-space:nowrap}.rv .rpt small{color:#9aa0ad;font-size:9px;font-weight:700;margin-left:3px;vertical-align:4px}
 .rv .rtab{margin-bottom:8px}.rv .rtab button.on{border-bottom-color:#e5352b}
-.rv .lkr{display:inline-flex;align-items:center;gap:8px}.rv .lkr .lc{width:18px;height:18px;border-radius:50%;background:var(--ok);display:grid;place-items:center}.rv .lkr .lc svg{width:11px;height:11px;fill:none;stroke:#14151b;stroke-width:2.6}
+.lkr{display:inline-flex;align-items:center;gap:8px;color:var(--fg)}.lkr .lc{width:20px;height:20px;border-radius:50%;background:var(--ok);display:grid;place-items:center}.lkr .lc svg{width:11px;height:11px;fill:none;stroke:#14151b;stroke-width:2.6}
+.lkr .lc.r{background:#e5534b}.lkr .lc.r svg{stroke:#fff}
 .rv .pcard .abtn{background:#e5352b;border-radius:0}
 .rjs{display:flex;gap:10px;overflow-x:auto;padding:12px 14px 16px;scrollbar-width:none}.rjs::-webkit-scrollbar{display:none}
 .rj{flex:none;width:44px;height:44px;border-radius:50%;background:#2a2c35;color:#9aa0ad;font-size:13px;font-weight:700;display:grid;place-items:center;line-height:1.05}
@@ -192,6 +193,7 @@ select.form{background:var(--card);color:var(--fg);border:0;padding:10px 12px;fo
 .sav .shirt{width:100%!important}
 .skv{display:grid;grid-template-columns:auto 1fr auto;gap:8px 8px;width:max-content;margin:0 auto;align-items:center;font-size:13px}
 .skv span{color:#9aa0ad;text-transform:uppercase;letter-spacing:.3px;padding-right:28px}.skv b{text-align:right;font-size:15px}
+.skv .lkc.r{background:#e5534b}.skv .lkc.r svg{stroke:#fff!important}
 .skv .lkc{width:16px;height:16px;border-radius:50%;background:var(--ok);display:grid;place-items:center}.skv .lkc svg{width:11px;height:11px;stroke:#14151b!important}
 .skv .ycoin{width:16px;height:16px;font-size:10px}
 .spill{display:flex;align-items:center;gap:10px;width:232px;margin:16px auto 0;background:#2a2c38;border:1px solid #3a3d48;border-radius:22px;padding:7px 8px}
@@ -540,6 +542,13 @@ function mcard(item) {
       <div class="r2"><span><span class="ck">${CHK}</span>Alineable</span><span class="kv">Precio<b>${eur(item.price)}</b></span></div>
       <div class="r3"><span>${CLOCK}<span data-ends="${item.ends}">${hms(item.ends - now())}</span></span>${item.nb ? `<span class="nb">${item.nb} pujas</span>` : ""}${btn}</div></div></div>`;
 }
+// Cláusula en las tarjetas: candado rojo y lo que falta mientras está blindado (días, o hh:mm:ss si queda menos de 24 h); si no, candado verde y su importe
+function lockCell(id) {
+  const ci = clauseInfo(id); if (!ci) return "";
+  const LK = c => `<span class="lc ${c}"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0"/></svg></span>`, left = ci.until - now();
+  if (left > 0) return `<span class="lkr">${LK("r")}${left >= 864e5 ? Math.ceil(left / 864e5) + " días" : `<span data-ends="${ci.until}">${hms(left)}</span>`}</span>`;
+  return `<span class="lkr">${LK("")}${eur(ci.c)}</span>`;
+}
 function pcard(id, mode, item) {
   const p = PL(id), se = seasonOf(id), js = allJ().slice(-5), v = val(id), prev = S.st.prices.prev[id] || v;
   const boxes = js.map(J => { const m = GAME.mins(J, id), pt = ptsOf(id, J); return `<i class="${!(m > 0) ? "x" : pt > 4 ? "p" : pt > 0 ? "z" : "n"}">${m > 0 ? pt : "–"}</i>`; }).join("");
@@ -554,7 +563,7 @@ function pcard(id, mode, item) {
   } else {
     const listed = S.st.market.some(i => i.pid === id && i.seller === S.st.me);
     mid = `<div class="ln"><span class="ck">${CHK}</span>Alineable</div><div class="rt">MEDIA: <b>${se.media.toFixed(2).replace(".", ",")}</b></div>
-      <div class="ln"><span class="coin">€</span>${eur(v)}</div><div class="rt">${trend}</div>`;
+      <div class="ln"><span class="coin">€</span>${eur(v)}</div><div class="rt">${lockCell(id)}</div>`;
     btn = listed ? `<button class="abtn sm" data-unlist="${id}">Quitar</button>` : `<button class="abtn sm" data-acts="${id}">Acciones</button>`;
   }
   return `<div class="pcard"><button class="ph" data-ficha="${id}" aria-label="Ver ficha de ${esc(p.n)}">${shirt(p, 70)}${inL ? `<span class="inxi">${CHK}</span>` : ""}<span class="tm">${crest(p.t)}${esc(team(p.t).short)}</span></button><div class="bd">
@@ -608,7 +617,7 @@ function vcard(id, item, btn) {
   return `<div class="mc"><button class="ph" data-ficha="${id}" aria-label="Ver ficha de ${esc(p.n)}">${shirt(p, 80)}<span class="tmb">${crest(p.t)}</span></button>
     <div class="bd"><button class="r1" data-ficha="${id}"><span class="pos ${posOf(id)}">${posOf(id)}</span><b>${esc(p.n)}</b><span class="pf">PFSY<b>${se.pf}</b></span></button>
       <div class="r2"><span><span class="ck">${CHK}</span>Alineable</span><span class="kv">Valor<em>${eur(val(id))}</em></span></div>
-      <div class="r2"><span>${ci ? `<span class="lkg">${LOCK}</span>${eur(ci.c)}` : ""}</span>${item ? `<span class="kv">Precio<b>${eur(item.price)}</b></span>` : ""}</div>
+      <div class="r2"><span>${lockCell(id)}</span>${item ? `<span class="kv">Precio<b>${eur(item.price)}</b></span>` : ""}</div>
       <div class="r3"><span>${item ? `${CLOCK}<span data-ends="${item.ends}">${hms(item.ends - now())}</span>` : ""}</span>${btn}</div></div></div>`;
 }
 const myList = id => S.st.market.find(i => i.pid === id && i.seller === S.st.me);
@@ -779,7 +788,7 @@ function fichaView(id) {
     <div class="fh"><div class="av">${shirt(p, 84)}<span class="tmb">${crest(p.t)}</span></div>
       <div class="bd"><div class="r1"><span class="pos ${posOf(id)}">${posOf(id)}</span><h2>${esc(p.n)}</h2><span class="pf">PFSY<b>${se.pf}</b></span></div>
         <div class="r2"><span><span class="ck">${CHK}</span>Alineable</span><span class="md">MEDIA:<b>${(Math.round(se.media * 10) / 10).toString()}</b></span></div>
-        <div class="r2"><span><span class="coin">€</span>${eur(vv)}</span><span>${LK}${eur(ci ? ci.c : vv)}</span></div>
+        <div class="r2"><span><span class="coin">€</span>${eur(vv)}</span><span>${ci ? lockCell(id) : LK + eur(vv)}</span></div>
         <div class="bt"><button class="ol" data-hist="${id}">Valor histórico</button><button class="abtn" data-acts="${id}">Acciones</button></div></div></div>
     ${S.hist === id ? `<div class="hist"><div class="note" style="margin:0">Valor de los últimos ${h.length} días${dv ? ` · ayer ${dv > 0 ? "+" : ""}${eur(dv)} €` : ""}</div><div class="spark">${bars}</div></div>` : ""}
     <div class="jstrip">${strip}</div>${det}</div>`;
@@ -837,7 +846,7 @@ function renderSheet() {
         : `<button class="opt" data-act="raiseask"><b>Subir cláusula</b><span>Ahora ${eur(ci.c)} € · ${now() < ci.until ? "blindado hasta el " + fmtWhen(ci.until) : "sin blindaje"}</span></button>`) : ""}
       ${sh.list ? `<div class="fld"><label for="listv">Precio de salida (€, mínimo su valor)</label><input id="listv" class="inp" type="number" min="${val(id)}" step="10000" value="${val(id)}"></div><button class="abtn" data-act="listok">Poner en el mercado</button>` : ""}` : `
       ${inMk ? `<button class="opt" data-bid="${id}"><b>${S.st.myBids[id] ? "Cambiar puja (" + eur(S.st.myBids[id]) + " €)" : "Pujar"}</b><span>se resuelve el ${fmtWhen(inMk.ends)}</span></button>` : ""}
-      ${ci ? (now() < ci.until ? `<div class="opt"><b>Cláusula ${eur(ci.c)} €</b><span>blindado hasta el ${fmtWhen(ci.until)}</span></div>`
+      ${ci ? (now() < ci.until ? `<div class="opt"><b>Cláusula cerrada</b><span>se abre el ${fmtWhen(ci.until)}</span></div>`
         : sh.clause ? `<button class="opt red" data-act="clauseok" data-pid="${id}" ${S.st.team.money < ci.c || GAME.clauseBlocked(now()) ? "disabled" : ""}><b>Confirmar: pagar ${eur(ci.c)} € a ${esc(teamName(ci.owner))}</b><span>${GAME.clauseBlocked(now()) ? "los viernes no se pueden pagar cláusulas" : S.st.team.money < ci.c ? "te faltan " + eur(ci.c - S.st.team.money) + " €" : "pasa a tu equipo ahora mismo"}</span></button>`
         : `<button class="opt" data-act="clauseask" data-pid="${id}"><b>Pagar cláusula</b><span>${eur(ci.c)} € · tu saldo ${eur(S.st.team.money)} €</span></button>`) : ""}
       ${own && own !== S.st.me ? (() => { const mo = offOut().find(o => o.pid === id);
@@ -865,7 +874,7 @@ function rcard(id) {
   return `<div class="pcard"><button class="ph" data-ficha="${id}" aria-label="Ver ficha de ${esc(p.n)}">${shirt(p, 70)}<span class="tm">${crest(p.t)}${esc(team(p.t).short)}</span></button><div class="bd">
     <button class="tt" data-ficha="${id}"><span class="pos ${posOf(id)}">${posOf(id)}</span><b>${esc(p.n)}</b></button><div class="big">PFSY<b>${se.pf}</b></div>
     <div class="ln"><span class="ck">${CHK}</span>Alineable</div><div class="rt">MEDIA: <b>${se.media.toFixed(2).replace(".", ",")}</b></div>
-    <div class="ln"><span class="coin">€</span>${eur(v)}</div><div class="rt"><span class="lkr"><span class="lc"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0"/></svg></span>${eur(ci ? ci.c : v)}</span></div>
+    <div class="ln"><span class="coin">€</span>${eur(v)}</div><div class="rt">${lockCell(id)}</div>
     <div class="boxes">${boxes}</div><div><button class="abtn sm" data-racts="${id}">Acciones</button></div></div></div>`;
 }
 function rivalView(sh) {
@@ -904,7 +913,7 @@ function mofView(id) {
   const p = PL(id), ci = clauseInfo(id), v = val(id), mo = offOut().find(o => o.pid === id);
   return `<div class="sell"><div class="shd"><button data-back="1" aria-label="Volver"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><h1>Oferta por ${esc(p.n)}</h1><span></span></div>
     <div class="sav">${shirt(p, 100)}</div>
-    <div class="skv"><i class="ycoin">€</i><span>Valor de mercado</span><b>${eur(v)}</b>${ci ? `<i class="lkc">${LOCK}</i><span>Valor de cláusula</span><b>${eur(ci.c)}</b>` : ""}</div>
+    <div class="skv"><i class="ycoin">€</i><span>Valor de mercado</span><b>${eur(v)}</b>${ci ? `<i class="lkc ${now() < ci.until ? "r" : ""}">${LOCK}</i><span>Valor de cláusula</span><b>${eur(ci.c)}</b>` : ""}</div>
     <div class="spill"><span class="eu">€</span><label for="mofv"><small>IMPORTE</small><input id="mofv" type="text" inputmode="numeric" autocomplete="off" value="${fmtN(mo ? mo.amount : v)}"></label><button class="pen" data-act="pen" aria-label="Editar importe"><svg viewBox="0 0 24 24"><path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/></svg></button><button class="clr" data-act="mofclr" aria-label="Borrar importe">×</button></div>
     <div class="sfoot"><button class="sgo" data-act="mofgo">Hacer oferta de compra</button><p class="ssal">Tu saldo: <b>${eur(S.st.team.money)}</b><i class="gcoin">€</i></p></div></div>`;
 }
@@ -926,7 +935,7 @@ function sellView(id) {
   const p = PL(id), ci = clauseInfo(id), v = val(id);
   return `<div class="sell"><div class="shd"><button data-back="1" aria-label="Volver"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><h1>Fijar el precio de venta</h1><span></span></div>
     <div class="sav">${shirt(p, 100)}</div>
-    <div class="skv"><i class="ycoin">€</i><span>Valor de mercado</span><b>${eur(v)}</b>${ci ? `<i class="lkc">${LOCK}</i><span>Valor de cláusula</span><b>${eur(ci.c)}</b>` : ""}</div>
+    <div class="skv"><i class="ycoin">€</i><span>Valor de mercado</span><b>${eur(v)}</b>${ci ? `<i class="lkc ${now() < ci.until ? "r" : ""}">${LOCK}</i><span>Valor de cláusula</span><b>${eur(ci.c)}</b>` : ""}</div>
     <div class="spill"><span class="eu">€</span><label for="listv"><small>Precio de venta</small><input id="listv" type="text" inputmode="numeric" autocomplete="off" value="${fmtN(v)}"></label><button class="pen" data-act="pen" aria-label="Editar precio"><svg viewBox="0 0 24 24"><path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/></svg></button></div>
     <div class="sfoot"><button class="sgo" data-act="listok">Añadir al mercado</button><p class="ssal">Tu saldo: <b>${eur(S.st.team.money)}</b><i class="gcoin">€</i></p></div></div>`;
 }
