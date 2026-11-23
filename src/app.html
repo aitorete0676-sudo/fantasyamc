@@ -96,6 +96,13 @@ select.form{background:var(--card);color:var(--fg);border:0;padding:10px 12px;fo
 .boxes i.p{border-bottom-color:var(--ok)} .boxes i.z{border-bottom-color:#e0a030} .boxes i.n{border-bottom-color:var(--bad)} .boxes i.x{color:var(--muted)}
 .up{color:var(--ok)} .dn{color:var(--bad)}
 .trend{font-size:12px;font-weight:700}
+.hm{position:fixed;z-index:60;left:12px;top:calc(env(safe-area-inset-top,0px) + 62px);background:#22242d;border-radius:14px;min-width:220px;box-shadow:0 10px 30px rgba(0,0,0,.5);overflow:hidden;animation:hmin .15s ease-out;transform-origin:top left}
+.hm button{display:flex;align-items:center;gap:12px;width:100%;padding:15px 18px;font-size:16px;text-align:left;border-bottom:1px solid #2f323c}.hm button:last-child{border-bottom:0}.hm button svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2}
+@keyframes hmin{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:none}}
+.vchips{display:flex;gap:8px;overflow-x:auto;padding:10px 12px 4px;max-width:640px;margin:0 auto}.vchips button{flex:none;padding:7px 13px;border-radius:18px;background:#22242d;color:var(--muted);font-size:14px;font-weight:600}.vchips button.on{background:var(--accent);color:#fff}
+.vrow{display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center;width:100%;padding:9px 12px;border-bottom:1px solid #22242d;text-align:left}.vrow .vn{min-width:0}.vrow .vn b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:15px}.vrow .vn small{color:var(--muted);font-size:12px}
+.vph{position:relative;width:44px;height:44px;border-radius:50%;overflow:hidden;background:#181a21;display:grid;place-items:center}.vph .shirt:not(.foto){width:80%}
+.vrow .vv{text-align:right}.vrow .vv b{display:block;font-size:15px}.vrow .vv span{font-size:12px;font-weight:700}.vlist{max-width:640px;margin:0 auto}
 .mc{display:grid;grid-template-columns:20% minmax(0,1fr);background:#23252f;margin:0 -4px 8px}
 .mc .ph{position:relative;background:#1b1c22;display:flex;align-items:flex-end;justify-content:center;overflow:hidden;min-height:150px}
 .mc .ph .shirt:not(.foto){width:80%;margin:auto}
@@ -349,7 +356,7 @@ nav.bn svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:1.6
 
 <header>
   <div class="hd">
-    <button class="rbtn" data-go="more" aria-label="Menú"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+    <button class="rbtn" data-act="hmenu" aria-label="Menú"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
     <button class="logo" id="lgname" data-act="leagues">ALMAZORA C <span>fantasy</span></button>
     <button class="rbtn" data-act="search" aria-label="Buscar jugador"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg></button>
   </div>
@@ -526,13 +533,13 @@ function render() {
   if (!S.st.lg) {   // sin liga todavía
     subt.innerHTML = ""; main.innerHTML = S.view === "more" && S.sub.more === "admin" ? adminView() : leaguesView(true); return renderSheet(); }
   const subs = SUBS[S.view] || [];
-  subt.innerHTML = S.view === "activity" || S.view === "leagues" ? '<div class="subline"></div>' : `<div class="subt">${subs.map(([k, l]) => `<button data-sub="${k}" class="${S.sub[S.view] === k ? "on" : ""}">${l}</button>`).join("")}</div>`;
+  subt.innerHTML = S.view === "more" || S.view === "vals" ? "" : S.view === "activity" || S.view === "leagues" ? '<div class="subline"></div>' : `<div class="subt">${subs.map(([k, l]) => `<button data-sub="${k}" class="${S.sub[S.view] === k ? "on" : ""}">${l}</button>`).join("")}</div>`;
   if (S.view === "team") info.innerHTML = infoBar();
   const v = S.view, sub = S.sub[v];
   main.innerHTML = (v === "team" && !S.st.team.name ? welcome() : "") +
     (v === "team" ? (sub === "line" ? lineView() : sub === "squad" ? squadView() : ptsView()) :
      v === "market" ? (sub === "mk" ? marketView() : sub === "ops" ? opsView() : histView()) :
-     v === "leagues" ? leaguesView() : v === "table" ? tableView() : v === "activity" ? activityView() : sub === "admin" ? adminView() : sub === "leagues" ? leaguesView() : rulesView());
+     v === "leagues" ? leaguesView() : v === "table" ? tableView() : v === "activity" ? activityView() : v === "vals" ? valsView() : sub === "admin" && S.st.admin ? adminView() : sub === "leagues" ? leaguesView() : rulesView());
   if (v === "market") { const bids = Object.values(S.st.myBids || {}).reduce((a, x) => a + x, 0);
     const cl = (S.st.leagues || []).find(l => l.code === S.st.lg);
     bar.innerHTML = `<div class="mkbar"><div><span class="lname">${esc(cl ? cl.name : "LIGA")}</span><span class="sums"><span class="nums"><b>${eur(S.st.team.money)}</b><i>-${eur(bids)}</i><b>${eur(S.st.team.money - bids)}</b></span><span class="coin">€</span></span></div></div><div class="mkpad"></div>`; }
@@ -776,8 +783,8 @@ function rulesView() {
     <tr><td>Gol en propia puerta</td><td>−2</td></tr></table></div>
     <div class="box"><h3>Precios</h3><p>El precio de salida sale de los puntos de la temporada con una escala como la de LaLiga Fantasy: el mejor vale unos 100 M, uno de 60 puntos (top 10 %) unos 40 M, uno de la media unos 10 M y los que no juegan 0,5 M. La plantilla inicial no trae a nadie de más de 30 M. Después cambia cada día a las 00:00:</p><ul>
     <li>Los precios son los mismos en todas las ligas.</li>
-    <li>Demanda: +1 % por cada puja que reciba en cualquier liga (tope +5 %). Si alguien lo pone a la venta y nadie puja, −1 %.</li>
-    <li>Rendimiento: el día después de publicar la jornada, (puntos − 3) × 1 %, entre −5 % y +8 %. Si no juega, −1 %.</li></ul></div>
+    <li>Demanda: +0,5 % por cada puja que reciba en cualquier liga (tope +2 %). Si alguien lo pone a la venta y no se vende, −0,5 %.</li>
+    <li>Rendimiento: el día después de publicar la jornada, (puntos − 3) × 0,5 %, entre −2 % y +3 %. Si no juega, −0,5 %.</li><li>Ningún jugador sube ni baja más de 2 M en un día.</li></ul></div>
     ${notifBox()}<div class="box"><p>Has entrado como <b>${esc(S.st.me)}</b>${S.st.admin ? " (administrador)" : ""}.</p><button class="gbtn" data-act="logout">Cerrar sesión</button></div>`;
 }
 
@@ -1013,6 +1020,29 @@ function markPresented() { const t = S.st && S.st.team; if (!t || t.pres === t.j
 // La alineación se cambia al momento en pantalla y se guarda en segundo plano (si falla, se avisa y se recarga)
 function saveLineup(l) { const t = S.st.team; t.lineups = t.lineups || {}; t.lineups[cur().n] = { f: l.f, s: l.s.slice(), c: l.c }; render();
   return api("lineup", { f: l.f, s: l.s, c: l.c }).then(() => true, e => { toast(e.message); refresh(); return false; }); }
+// Menú de los tres puntitos: Información, Mercado (subidas y bajadas) y Admin (solo el administrador)
+function hmenu() {
+  const old = document.getElementById("hm"); if (old) return old.remove();
+  const d = document.createElement("div"); d.id = "hm"; d.className = "hm";
+  d.innerHTML = `<button data-hm="rules"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>Información</button>
+    <button data-hm="vals"><svg viewBox="0 0 24 24"><path d="M4 17l5-5 4 4 7-8"/><path d="M15 8h5v5"/></svg>Mercado</button>
+    ${S.st && S.st.admin ? `<button data-hm="admin"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/></svg>Admin</button>` : ""}`;
+  document.body.appendChild(d);
+}
+document.addEventListener("click", e => { const hm = document.getElementById("hm"); if (hm && !e.target.closest("#hm") && !e.target.closest('[data-act="hmenu"]')) { hm.remove(); e.stopPropagation(); e.preventDefault(); } }, true);
+// Subidas y bajadas de valor del día anterior
+function valsView() {
+  const o = S.vo || "up", ps = S.vp || "", pr = S.st.prices;
+  const rows = S.liga.players.filter(p => pr.v[p.id] && (!ps || posOf(p.id) === ps)).map(p => { const v = pr.v[p.id], pv = pr.prev[p.id] || v; return { id: p.id, v, d: v - pv, pc: pv ? (v - pv) / pv : 0 }; });
+  const srt = { up: (a, b) => b.d - a.d, dn: (a, b) => a.d - b.d, hi: (a, b) => b.v - a.v, lo: (a, b) => a.v - b.v }[o]; rows.sort(srt);
+  const chip = (k, l, cur, attr) => `<button data-${attr}="${k}" class="${cur === k ? "on" : ""}">${l}</button>`;
+  return `<div class="vchips">${[["up", "Más suben"], ["dn", "Más bajan"], ["hi", "Precio: mayor"], ["lo", "Precio: menor"]].map(([k, l]) => chip(k, l, o, "vo")).join("")}</div>
+    <div class="vchips">${[["", "Todos"], ["POR", "POR"], ["DEF", "DEF"], ["CEN", "CEN"], ["DEL", "DEL"]].map(([k, l]) => chip(k, l, ps, "vp")).join("")}</div>
+    <div class="note" style="padding:6px 12px">Cambio de valor de ayer a hoy (los valores cambian a las 00:00).</div>
+    <div class="vlist">${rows.map(r => { const p = PL(r.id);
+      return `<button class="vrow" data-ficha="${r.id}"><span class="vph">${shirt(p, 40)}</span><span class="vn"><b><span class="pos ${posOf(r.id)}">${posOf(r.id)}</span> ${esc(p.n)}</b><small>${esc(team(p.t).short)}</small></span>
+        <span class="vv"><b>${eur(r.v)}</b><span class="${r.d > 0 ? "up" : r.d < 0 ? "dn" : ""}" style="${r.d ? "" : "color:var(--muted)"}">${r.d > 0 ? "▲ +" : r.d < 0 ? "▼ " : "= "}${r.d ? eur(r.d) + " (" + (r.pc * 100).toFixed(1).replace(".", ",") + " %)" : ""}</span></span></button>`; }).join("")}</div>`;
+}
 document.addEventListener("click", async e => {
   const b = e.target.closest(".pkopt") || e.target.closest("button,[data-close],[data-rmenu],[data-rclno],[data-avx]"); if (!b) return; const d = b.dataset;
   if (d.pgo) { markPresented(); S.sheet = null; return render(); }
@@ -1021,6 +1051,9 @@ document.addEventListener("click", async e => {
   if (d.close) { if (e.target !== b) return; S.sheet = (S.sheet && S.sheet.prev) || null; return render(); }
   if (d.back) { S.sheet = (S.sheet && S.sheet.prev) || null; return render(); }
   if (d.authTab) { S.authTab = d.authTab; S.authMsg = ""; return render(); }
+  if (d.hm !== undefined) { const m = document.getElementById("hm"); if (m) m.remove(); S.sheet = null; if (d.hm === "vals") S.view = "vals"; else { S.view = "more"; S.sub.more = d.hm; } scrollTo(0, 0); return render(); }
+  if (d.vo !== undefined) { S.vo = d.vo; return render(); }
+  if (d.vp !== undefined) { S.vp = d.vp; return render(); }
   if (d.go) { S.view = d.go; S.capMode = false; S.sheet = null; scrollTo(0, 0); return render(); }
   if (d.sub) { S.sub[S.view] = d.sub; scrollTo(0, 0); return render(); }
   if (d.mpos) { S.mpos = d.mpos; return render(); }
@@ -1077,6 +1110,7 @@ document.addEventListener("click", async e => {
     try { const r = await api(a === "joinlg" ? "joinLeague" : "createLeague", a === "joinlg" ? { code: v } : { name: v }); setLg(r.code); S.view = "team"; S.sub.team = "line";
       if (a === "newlg") toast("Liga creada. Pasa el código " + r.code + " a tus amigos."); await refresh(); S.sheet = { t: "present" }; renderSheet(); }
     catch (e) { toast(e.message); } return; }
+  if (a === "hmenu") return hmenu();
   if (a === "pushon") return pushOn(true);
   if (a === "pushask") { const x = document.querySelector(".avx"); if (x) x.remove(); return pushOn(true); }
   if (a === "logout") { api("logout").catch(() => {}); try { localStorage.removeItem(TK); } catch (e) {} return location.reload(); }

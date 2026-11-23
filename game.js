@@ -9,6 +9,7 @@
     DEBT: 0.2,                // en pujas a LIGA se puede quedar en negativo hasta el 20 % del valor del equipo
     POINTS_FROM: 10,          // los equipos ganan puntos y dinero desde la jornada 10
     START_MONEY: 150000000,    // dinero al entrar (150 M)
+    MAX_DAY: 2000000,          // un jugador no sube ni baja más de 2 M en un día
     START_VALUE: 100000000,    // valor aproximado de la plantilla inicial (100 M)
     START_MAX: 20000000,       // en la plantilla inicial no toca nadie que valga más de 20 M
     START_SQUAD: { POR: 1, DEF: 4, CEN: 4, DEL: 2 },   // plantilla aleatoria al entrar (11)
