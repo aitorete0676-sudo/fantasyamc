@@ -572,7 +572,6 @@ module.exports = async (req, res) => {
         if (!(x >= v)) return send(400, { error: "La oferta no puede ser menor que su valor (" + v.toLocaleString("es-ES") + " €)." });
         if (x > mine.money) return send(400, { error: "No tienes tanto saldo." });
         await redis("HSET", k("offers"), pid + "|" + me.name, JSON.stringify({ pid, from: me.name, to: ow, amount: x, at: Date.now() }));
-        await log(k, "market", `${mine.name || me.name} ha hecho una oferta por ${PL[pid].n} a ${tow.name || ow}`);
         await notify(ow, "Nueva oferta", `${mine.name || me.name} te ofrece ${x.toLocaleString("es-ES")} € por ${PL[pid].n}`, "/");
         return send(200, { ok: true });
       }
@@ -580,7 +579,7 @@ module.exports = async (req, res) => {
       const from = String(b.from || ""), raw = await redis("HGET", k("offers"), pid + "|" + from); const o = raw ? JSON.parse(raw) : null;
       if (!o || ow !== me.name) { if (o) await redis("HDEL", k("offers"), pid + "|" + from); return send(400, { error: "Esa oferta ya no está activa." }); }
       const buyerKey = k("team:") + from, buyer = await getJ(buyerKey);
-      if (a === "mgrReject") { await redis("HDEL", k("offers"), pid + "|" + from); await log(k, "market", `${mine.name || me.name} ha rechazado la oferta de ${(buyer && buyer.name) || from} por ${PL[pid].n}`); return send(200, { ok: true }); }
+      if (a === "mgrReject") { await redis("HDEL", k("offers"), pid + "|" + from); return send(200, { ok: true }); }
       if (locked) return send(400, { error: "Durante la jornada no se pueden cerrar traspasos." });
       if (!buyer || buyer.money < o.amount) return send(400, { error: "El comprador ya no tiene saldo para pagar esa oferta." });
       if (buyer.squad.length >= G.MAX_SQUAD) return send(400, { error: "El comprador ya tiene el máximo de jugadores." });

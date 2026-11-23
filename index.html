@@ -771,8 +771,10 @@ function tableView() {
 
 /* ---- Actividad ---- */
 const LOGT = { market: "Operación de mercado", reward: "Recompensa", nopts: "No puntuación", jornada: "Jornada", join: "Nuevo equipo" };
+const hidLog = x => / ha hecho una oferta por | ha rechazado la oferta de /.test(x.text || "");   // las ofertas entre mánagers no se ven en Actividad
 function activityView() {
-  return S.st.log.length ? S.st.log.map(x => `<div class="act"><div class="h"><b>${esc(LOGT[x.type] || "Aviso")}</b><span>${fmtD(x.at)}</span></div><p>${esc(x.text)}</p></div>`).join("") : '<div class="empty">Sin actividad todavía.</div>';
+  const L = S.st.log.filter(x => !hidLog(x));
+  return L.length ? L.map(x => `<div class="act"><div class="h"><b>${esc(LOGT[x.type] || "Aviso")}</b><span>${fmtD(x.at)}</span></div><p>${esc(x.text)}</p></div>`).join("") : '<div class="empty">Sin actividad todavía.</div>';
 }
 
 /* ---- Ligas privadas (como en AlmaBet): crear, unirse con código y cambiar ---- */
