@@ -352,7 +352,13 @@ nav.bn svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:1.6
 .jdet div{display:flex;justify-content:space-between;padding:2px 0}
 .mode{font-size:12px;color:var(--muted);text-align:center;padding:4px 12px 0}
 .srch{display:flex;gap:8px;margin-bottom:10px}
+.splash{position:fixed;inset:0;z-index:100;background:#1a1b22;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;transition:opacity .35s}
+.splash.out{opacity:0;pointer-events:none}
+.splash .sl{font-weight:800;font-size:56px;line-height:1;color:#fff;text-align:center;letter-spacing:1px;animation:slp 1.4s ease-in-out infinite}.splash .sl span{display:block;color:var(--accent);font-size:30px;font-weight:700;margin-top:6px}
+.splash .sb{width:140px;height:4px;border-radius:2px;background:#2c2f3a;overflow:hidden}.splash .sb i{display:block;width:40%;height:100%;background:var(--accent);border-radius:2px;animation:sbar 1s ease-in-out infinite}
+@keyframes sbar{from{transform:translateX(-100%)}to{transform:translateX(250%)}}@keyframes slp{50%{transform:scale(1.04)}}
 </style>
+<div class="splash" id="splash"><div class="sl">AMC<span>fantasy</span></div><div class="sb"><i></i></div></div>
 
 <header>
   <div class="hd">
@@ -487,11 +493,13 @@ function pushAsk() {
   const d = document.createElement("div"); d.className = "cfm avx"; d.dataset.avx = "1";
   d.innerHTML = `<div class="cfb"><h3>Notificaciones</h3><p>¿Quieres activar las notificaciones para enterarte cuando te hagan una oferta?</p><button data-act="pushask">Activar</button><button data-avx="1" style="color:#6b6f7b;font-weight:500">Ahora no</button></div>`; document.body.appendChild(d);
 }
+function hideSplash() { const sp = document.getElementById("splash"); if (!sp || sp.classList.contains("out")) return; sp.classList.add("out"); setTimeout(() => sp.remove(), 400); }
 async function boot() {
+  setTimeout(hideSplash, 12000);   // por si algo falla, que no se quede siempre
   fetch("/fotos.json").then(r => r.ok ? r.json() : []).then(a => { a.forEach(id => FOTOS.add(String(id))); if (S.store === "ok") render(); }).catch(() => {});
   const st0 = tok() ? api("state").catch(e => e) : null;   // a la vez que liga.json: carga más rápido
   try { const r = await fetch("/liga.json"); S.liga = await r.json(); S.liga.players.forEach(p => PMAP[p.id] = p); }
-  catch (e) { document.getElementById("main").innerHTML = '<div class="empty">No se han podido cargar los datos de la liga.</div>'; return; }
+  catch (e) { hideSplash(); document.getElementById("main").innerHTML = '<div class="empty">No se han podido cargar los datos de la liga.</div>'; return; }
   if (!tok()) { S.store = "auth"; return render(); }
   await refresh(st0);
   pushOn(false); pushAsk();
@@ -526,6 +534,7 @@ function render() {
   document.querySelectorAll("nav.bn button").forEach(b => b.classList.toggle("on", b.dataset.go === S.view));
   const main = document.getElementById("main"), info = document.getElementById("info"), bar = document.getElementById("mkbar"), subt = document.getElementById("subt");
   info.innerHTML = ""; bar.innerHTML = "";
+  if (S.store === "auth" || S.store === "ok") hideSplash();
   if (S.store === "auth") { subt.innerHTML = ""; main.innerHTML = authView(); return renderSheet(); }
   if (S.store !== "ok") { main.innerHTML = '<div class="empty">Cargando…</div>'; return; }
   const cl = (S.st.leagues || []).find(l => l.code === S.st.lg), ln = document.getElementById("lgname");
