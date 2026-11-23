@@ -389,7 +389,7 @@ module.exports = async (req, res) => {
       const ow = await redis("HGET", k("owner"), b.pid); if (!ow || ow === me.name) return send(400, { error: "Ese jugador no tiene dueño rival." });
       if (G.clauseBlocked(Date.now())) return send(400, { error: "Los viernes no se pueden pagar cláusulas (de jueves a las 24:00 a viernes a las 24:00)." });
       const t = await getJ(k("team:") + ow); if (!t || !t.squad.includes(b.pid)) return send(400, { error: "Ese jugador ya no está en ese equipo." });
-      const since = (t.since && t.since[b.pid]) || t.joined || 0, until = since + G.SHIELD_DAYS * 86400e3;
+      const until = G.shieldUntil(t, b.pid);
       if (Date.now() < until) return send(400, { error: "Está blindado hasta el " + new Date(until).toLocaleString("es-ES", { timeZone: "Europe/Madrid", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" }) + "." });
       if (mine.squad.length >= G.MAX_SQUAD) return send(400, { error: "Tienes el máximo de " + G.MAX_SQUAD + " jugadores." });
       const pr = await getPrices(), c = clauseOf(t, b.pid, pr); if (mine.money < c) return send(400, { error: "Te faltan " + (c - mine.money).toLocaleString("es-ES") + " € para la cláusula." });

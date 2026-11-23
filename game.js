@@ -16,6 +16,7 @@
     DAILY: 100000,             // recompensa diaria
     PER_POINT: 100000,         // € por punto en la jornada
     MARKET_SIZE: 12, MARKET_HM: "16:00", MARKET_DAYS: 2,
+    SHIELD_START: 14,          // los del reparto inicial: 14 días de blindaje
     SHIELD_DAYS: 7,            // días de blindaje: después de llegar a un equipo no se le puede pagar la cláusula
     CLAUSE_X: 2,               // subir la cláusula: cada € pagado la sube 2 €           // jugadores de la liga que salen cada día al mercado
     GOL: { POR: 10, DEF: 6, CEN: 5, DEL: 4 },
@@ -149,6 +150,9 @@
   }
   // Puntos de un equipo en una jornada. null = no puntúa: alineación incompleta o saldo negativo al cierre (why = "inc" | "neg").
   // Si hay foto del cierre (team.snap[n]) se usa esa: la plantilla que tenía a las 21:00 del viernes.
+  // Hasta cuándo está blindado un jugador (no se puede pagar su cláusula). Los del reparto inicial, 14 días; el resto, 7.
+  function shieldUntil(team, id) { const since = (team.since && team.since[id]) || team.joined || 0;
+    const ini = team.joined && Math.abs(since - team.joined) < 60e3; return since + (ini ? R.SHIELD_START : R.SHIELD_DAYS) * 86400e3; }
   function teamPoints(team, J, posOf) {
     const sn = team && team.snap && team.snap[J.n];
     const l = sn ? { f: sn.l.f, s: (sn.l.s || []).slice(0, 11), c: sn.l.c || null } : lineupFor(team, J.n), ids = l.s.filter(Boolean);
@@ -157,5 +161,5 @@
     let total = 0; ids.forEach(id => { total += points(posOf(id), J, id) * (id === l.c ? 2 : 1); });
     return { total, l };
   }
-  return Object.assign(R, { wday, clauseBlocked, jornadaLock, madridHM, nextClose, PRICE_VER, mins, parseActa, rows, madridTs, teamResult, breakdown, points, baseValue, day, nextMidnight, lineupFor, teamPoints });
+  return Object.assign(R, { wday, clauseBlocked, jornadaLock, madridHM, nextClose, PRICE_VER, mins, parseActa, rows, madridTs, teamResult, breakdown, points, baseValue, day, nextMidnight, lineupFor, teamPoints, shieldUntil });
 });
