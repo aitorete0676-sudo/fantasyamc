@@ -483,6 +483,7 @@ module.exports = async (req, res) => {
       await log(k, "market", `${(buyer.name) || from} ha fichado a ${PL[pid].n} de ${mine.name || me.name} por ${o.amount.toLocaleString("es-ES")}€ (oferta aceptada)`);
       return send(200, { ok: true, amount: o.amount });
     }
+    if (a === "presented") { mine.pres = mine.joined || 1; await setJ(myKey, mine); return send(200, { ok: true }); }   // ya ha visto la presentación de su plantilla
     if (a === "teamName") { mine.name = String(b.name || "").trim().slice(0, 28); await setJ(myKey, mine); return send(200, { ok: true }); }
     if (a === "daily") {
       const d = G.day(Date.now()); if (mine.daily === d) return send(400, { error: "Ya has recogido la recompensa de hoy." });

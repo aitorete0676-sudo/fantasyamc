@@ -202,7 +202,7 @@ select.form{background:var(--card);color:var(--fg);border:0;padding:10px 12px;fo
 .pc .fr .ck{position:absolute;right:3px;bottom:3px;z-index:3;width:16px;height:16px}
 .pc .fr .nm{background:#f4f5f7;color:#14151b;font-size:10px;padding:3px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pres .pgo{margin-top:auto;padding:16px 0 calc(16px + env(safe-area-inset-bottom,0px))}.pres .pgo button{display:block;width:calc(100% - 24px);max-width:616px;margin:0 auto;background:#e5352b;color:#fff;font-weight:700;font-size:16px;padding:14px}
-.page.zin{animation:zin .3s ease-out both}.page.zout{animation:zout .25s ease-in both}
+.page.zin{animation:zin .18s ease-out both}.page.zout{animation:zout .15s ease-in both}
 @keyframes zin{from{transform:scale(.15);opacity:.2;border-radius:30px}to{transform:none;opacity:1}}@keyframes zout{from{transform:none;opacity:1}to{transform:scale(.15);opacity:0}}
 .pk{max-width:640px;margin:0 auto}.pk .shd{display:grid;grid-template-columns:44px 1fr auto;align-items:center;padding:calc(10px + env(safe-area-inset-top,0px)) 12px 10px}
 .pk .shd h1{font-size:17px;margin:0;text-align:center}.pk .shd button svg{width:24px;height:24px;fill:none;stroke:#fff;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
@@ -456,7 +456,9 @@ let busy = false;
 async function refresh() {
   if (busy) return; busy = true;
   try { const st = await api("state"); S.skew = st.now - Date.now(); S.st = st; S.store = "ok"; if (st.lg !== LG) setLg(st.lg);
-    if (st.lg && st.team && st.team.joined && (st.team.squad || []).length && !S.sheet) { const key = "pres:" + st.lg + ":" + st.team.joined; let seen = true; try { seen = !!localStorage.getItem(key); localStorage.setItem(key, "1"); } catch (e) {} if (!seen) S.sheet = { t: "present" }; }
+    if (st.lg && st.team && st.team.joined && st.team.pres !== st.team.joined && (st.team.squad || []).length && (!S.sheet || S.sheet.t !== "present")) {   // la presentación solo la primera vez (se apunta en el servidor)
+      let seen = false; try { seen = !!localStorage.getItem("pres:" + st.lg + ":" + st.team.joined); } catch (e) {}
+      if (seen) markPresented(); else if (!S.sheet) S.sheet = { t: "present" }; }
     render(); }
   catch (e) { if (e.status === 401) { S.store = "auth"; render(); } }
   busy = false;
@@ -976,13 +978,16 @@ function sellView(id) {
 
 /* ---------- eventos ---------- */
 function aviso(m) { const d = document.createElement("div"); d.className = "cfm avx"; d.dataset.avx = "1"; d.innerHTML = `<div class="cfb"><h3>Aviso</h3><p>${esc(m)}</p><button data-avx="1">Cerrar</button></div>`; document.body.appendChild(d); }
-function pickClose() { if (!S.sheet || S.sheet.t !== "pick") return; S.sheet.out = 1; renderSheet(); setTimeout(() => { if (S.sheet && S.sheet.t === "pick") { S.sheet = null; render(); } }, 260); }
+function pickClose() { if (!S.sheet || S.sheet.t !== "pick") return; if (!S.sheet.out) { S.sheet.out = 1; renderSheet(); } setTimeout(() => { if (S.sheet && S.sheet.t === "pick") { S.sheet = null; render(); } }, 150); }
 let toastT; function toastOk(m) { toast(m); const t = document.getElementById("toast"); t.classList.add("ok"); t.innerHTML = `<span>${esc(m)}</span><button data-tx="1" aria-label="Cerrar">×</button>`; }
 function toast(m) { const t = document.getElementById("toast"); t.classList.remove("ok"); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2800); }
-function saveLineup(l) { return act("lineup", { f: l.f, s: l.s, c: l.c }); }
+function markPresented() { const t = S.st && S.st.team; if (!t || t.pres === t.joined) return; t.pres = t.joined; try { localStorage.setItem("pres:" + S.st.lg + ":" + t.joined, "1"); } catch (e) {} api("presented", {}).catch(() => {}); }
+// La alineación se cambia al momento en pantalla y se guarda en segundo plano (si falla, se avisa y se recarga)
+function saveLineup(l) { const t = S.st.team; t.lineups = t.lineups || {}; t.lineups[cur().n] = { f: l.f, s: l.s.slice(), c: l.c }; render();
+  return api("lineup", { f: l.f, s: l.s, c: l.c }).then(() => true, e => { toast(e.message); refresh(); return false; }); }
 document.addEventListener("click", async e => {
   const b = e.target.closest(".pkopt") || e.target.closest("button,[data-close],[data-rmenu],[data-rclno],[data-avx]"); if (!b) return; const d = b.dataset;
-  if (d.pgo) { S.sheet = null; return render(); }
+  if (d.pgo) { markPresented(); S.sheet = null; return render(); }
   if (d.avx) { if (e.target !== b) return; b.closest(".avx").remove(); return; }
   if (d.tx) { document.getElementById("toast").hidden = true; return; }
   if (d.close) { if (e.target !== b) return; S.sheet = (S.sheet && S.sheet.prev) || null; return render(); }
@@ -1031,8 +1036,8 @@ document.addEventListener("click", async e => {
   if (d.pkback) { return pickClose(); }
   if (d.pick != null) { const l = myLineup(), s = l.s.slice(); s[S.sheet.idx] = d.pick || null;
     const card = b.classList.contains("pkopt") ? b : null, top = document.querySelector(".pkcur");
-    if (card && top) { const a = card.getBoundingClientRect(), t = top.getBoundingClientRect(); card.style.transition = "transform .35s ease"; card.style.transform = `translateY(${t.top - a.top}px)`; card.style.zIndex = 3; top.style.transition = "opacity .25s"; top.style.opacity = 0; }
-    saveLineup({ f: l.f, s, c: s.includes(l.c) ? l.c : null }); setTimeout(pickClose, card ? 380 : 0); return; }
+    if (card && top) { const a = card.getBoundingClientRect(), t = top.getBoundingClientRect(); card.style.transition = "transform .2s ease"; card.style.transform = `translateY(${t.top - a.top}px)`; card.style.zIndex = 3; top.style.transition = "opacity .15s"; top.style.opacity = 0; }
+    setTimeout(() => { if (S.sheet && S.sheet.t === "pick") S.sheet.out = 1; saveLineup({ f: l.f, s, c: s.includes(l.c) ? l.c : null }); pickClose(); }, card ? 210 : 0); return; }
   const a = d.act;
   if (a === "daily") return act("daily", {}, "+" + eur(GAME.DAILY) + " €");
   if (a === "cap") { S.capMode = !S.capMode; return render(); }
