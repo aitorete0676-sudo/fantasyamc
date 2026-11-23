@@ -215,28 +215,32 @@ function finde(t) {   // viernes 21:00 → lunes 12:00, hora de Madrid
   const wd = f.find(x => x.type === "weekday").value, h = +f.find(x => x.type === "hour").value;
   return (wd === "Fri" && h >= 21) || wd === "Sat" || wd === "Sun" || (wd === "Mon" && h < 12);
 }
+// Correcciones a mano de las actas de la federación: por jornada, gol de un jugador que en realidad es de otro (ids).
+const FIXES = { 9: [{ gol: "38058", a: "9796573" }] };   // J9 Almazora C: gol de Sergio Domenech → Carlos Moliner
+const fxOf = n => JSON.stringify(FIXES[n] || []);
+function fixActa(d, n) { for (const f of FIXES[n] || []) { const g = d.goles.find(x => x.id_jugador === f.gol); if (g) g.id_jugador = f.a; } return d; }
 async function autoJornada(leagues, force, cron) {
   if (force) await redis("SET", "auto:chk", "1", "EX", 60);
   else { if (!cron && !finde(Date.now())) return { msg: "Fuera del horario de búsqueda." };
     if (!(await redis("SET", "auto:chk", "1", "NX", "EX", 7200))) return { msg: "Ya se ha mirado hace poco." }; }
   const imp = await hgetall("jornadas"), out = [];
   let n = G.FIRST_J; while (imp[n]) n++;
-  const todo = Object.values(imp).filter(J => J.faltan > 0 && J.n < n).map(J => J.n).concat([n]);
+  const todo = Object.values(imp).filter(J => J.n < n && (J.faltan > 0 || (J.auto && (J.fx || "[]") !== fxOf(J.n)))).map(J => J.n).concat([n]);
   const idx = {}; LIGA.teams.forEach((t, i) => idx[t.name.trim().toLowerCase()] = i);
   const tid = x => idx[String(x).trim().toLowerCase()];
   for (const jn of todo) {
     const ps = await FF.jornada(jn); if (!ps.length) { out.push(`J${jn}: sin partidos`); continue; }
     const played = ps.filter(p => p.jugado), faltan = ps.length - played.length, last = Math.max(...ps.map(p => p.ts || 0));
     if (!played.length) { out.push(`J${jn}: aún no se ha jugado`); continue; }
-    if (imp[jn] && imp[jn].faltan === faltan) { out.push(`J${jn}: sin cambios`); continue; }
+    if (imp[jn] && imp[jn].faltan === faltan && (imp[jn].fx || "[]") === fxOf(jn)) { out.push(`J${jn}: sin cambios`); continue; }
     if (faltan && Date.now() < last + 6 * 3600e3) { out.push(`J${jn}: faltan ${faltan} partidos por jugar`); continue; }
-    const actas = await Promise.all(played.map(p => FF.actaHtml(p.cod).then(h => FF.parseActaHtml(h, p.cod, p.local, p.visitante)).catch(() => null)));
+    const actas = await Promise.all(played.map(p => FF.actaHtml(p.cod).then(h => FF.parseActaHtml(h, p.cod, p.local, p.visitante)).then(d => d && fixActa(d, jn)).catch(() => null)));
     const matches = [], st = {}; let bad = 0;
     for (const d of actas) { if (!d || tid(d.local) == null || tid(d.visitante) == null) { bad++; continue; }
       const r = G.parseActa(d, tid); matches.push(r.match); Object.entries(r.st).forEach(([pid, x]) => { if (PL[pid]) st[pid] = x; }); }
     if (bad) { out.push(`J${jn}: no se han podido leer ${bad} actas`); continue; }
     matches.sort((a, b) => a[4] < b[4] ? -1 : 1);
-    const Jn = { n: jn, matches, st, publicada: Date.now(), auto: 1, faltan: faltan + bad };
+    const Jn = { n: jn, matches, st, publicada: Date.now(), auto: 1, faltan: faltan + bad, fx: fxOf(jn) };
     await redis("HSET", "jornadas", String(jn), JSON.stringify(Jn)); await payJornada(jn, Jn, leagues);
     out.push(`J${jn} publicada (${matches.length} partidos${faltan ? ", faltan " + faltan : ""})`);
   }
