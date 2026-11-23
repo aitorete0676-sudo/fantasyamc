@@ -176,8 +176,10 @@ async function newTeam(k, name) {
   for (let tries = 0; tries < 300; tries++) {
     const squad = []; let val = 0;
     for (const [pos, n] of Object.entries(G.START_SQUAD)) {
-      const pool = LIGA.players.filter(p => posOf(p.id) === pos && !taken.has(p.id) && !squad.includes(p.id) && (pr.v[p.id] || 0) <= G.START_MAX).sort(() => Math.random() - 0.5);
-      pool.slice(0, n).forEach(p => { squad.push(p.id); val += pr.v[p.id]; });
+      const free = LIGA.players.filter(p => posOf(p.id) === pos && !taken.has(p.id) && !squad.includes(p.id));
+      let pool = free.filter(p => (pr.v[p.id] || 0) <= G.START_MAX).sort(() => Math.random() - 0.5);
+      if (pool.length < n) pool = pool.concat(free.filter(p => !pool.includes(p)).sort((a, b) => (pr.v[a.id] || 0) - (pr.v[b.id] || 0)));   // si no hay baratos, los más baratos que queden
+      pool.slice(0, n).forEach(p => { squad.push(p.id); val += pr.v[p.id] || 0; });
     }
     const err = Math.abs(val - G.START_VALUE);
     if (!best || err < best.err) best = { squad, err };
@@ -309,6 +311,21 @@ module.exports = async (req, res) => {
           t.money += paid; if (t.cl && t.cl[id]) t.cl[id] = Math.max(0, t.cl[id] - paid * G.CLAUSE_X); ch.add(u);
           await log(kk, "market", `Se han devuelto ${paid.toLocaleString("es-ES")}€ a ${t.name || u} por subir la cláusula de ${PL[id].n}`); }
         for (const u of ch) await setJ(kk("team:") + u, teams[u]); }
+    }
+    if (await redis("SET", "mig:fill1", "1", "NX")) {   // una vez: a quien le falten jugadores del reparto (2 POR, 5 DEF, 5 CEN, 3 DEL) se le completan
+      const pr = await getPrices();
+      for (const code of Object.keys(leagues)) { const kk = keysOf(code), owner = (await redis("HGETALL", kk("owner"))) || [], taken = new Set(owner.filter((_, i) => i % 2 === 0));
+        const mk = await getJ(kk("market")); (mk ? mk.items : []).forEach(i => taken.add(i.pid));
+        for (const u of (await redis("SMEMBERS", kk("users"))) || []) { const t = await getJ(kk("team:") + u); if (!t || !t.joined) continue; const add = [];
+          for (const [pos, n] of Object.entries(G.START_SQUAD)) { const have = (t.squad || []).filter(id => posOf(id) === pos).length; if (have >= n) continue;
+            const free = LIGA.players.filter(p => posOf(p.id) === pos && !taken.has(p.id));
+            let pool = free.filter(p => (pr.v[p.id] || 0) <= G.START_MAX).sort(() => Math.random() - 0.5);
+            if (pool.length < n - have) pool = pool.concat(free.filter(p => !pool.includes(p)).sort((a, b) => (pr.v[a.id] || 0) - (pr.v[b.id] || 0)));
+            pool.slice(0, n - have).forEach(p => { add.push(p.id); taken.add(p.id); }); }
+          if (!add.length) continue;
+          for (const id of add) { t.squad.push(id); t.cl = t.cl || {}; t.since = t.since || {}; t.cl[id] = Math.round((pr.v[id] || 0) * G.CLAUSE_START); t.since[id] = t.joined; await redis("HSET", kk("owner"), id, u); }
+          await setJ(kk("team:") + u, t);
+          await log(kk, "market", `${t.name || u} ha recibido ${add.length} jugador${add.length > 1 ? "es" : ""} que le faltaban del reparto: ${add.map(id => PL[id].n).join(", ")}`); } }
     }
     if (await redis("SET", "mig:cl53", "1", "NX")) {   // una vez: cláusula de los jugadores del reparto inicial = valor × 5/3
       const pr = await getPrices();
