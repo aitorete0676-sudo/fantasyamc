@@ -169,28 +169,28 @@ function currentJ(J) {
 }
 
 /* ---------- equipo nuevo: 100 M y una plantilla aleatoria de unos 100 M ---------- */
+// Reparto de una plantilla: START_SQUAD por posiciones, nadie por encima de START_MAX, y lo más cerca posible de START_VALUE
+// (al azar y luego cambios de jugador por otro de su posición mientras acerquen el valor al objetivo)
+function dealOne(pr, taken) {
+  const V = id => pr.v[id] || 0, pools = {}, squad = [];
+  for (const [pos, n] of Object.entries(G.START_SQUAD)) {
+    pools[pos] = LIGA.players.filter(p => posOf(p.id) === pos && !taken.has(p.id) && V(p.id) <= G.START_MAX).map(p => p.id);
+    if (pools[pos].length < n) pools[pos] = pools[pos].concat(LIGA.players.filter(p => posOf(p.id) === pos && !taken.has(p.id) && V(p.id) > G.START_MAX).sort((a, b) => V(a.id) - V(b.id)).map(p => p.id).slice(0, n - pools[pos].length));
+    pools[pos].slice().sort(() => Math.random() - 0.5).slice(0, n).forEach(id => squad.push(id));
+  }
+  let val = squad.reduce((a, id) => a + V(id), 0);
+  for (let it = 0; it < 3000 && Math.abs(val - G.START_VALUE) > 1e6; it++) {
+    const i = Math.floor(Math.random() * squad.length), pos = posOf(squad[i]), pool = pools[pos], c = pool[Math.floor(Math.random() * pool.length)];
+    if (squad.includes(c)) continue;
+    const nv = val - V(squad[i]) + V(c); if (Math.abs(nv - G.START_VALUE) < Math.abs(val - G.START_VALUE)) { squad[i] = c; val = nv; }
+  }
+  return squad;
+}
 async function newTeam(k, name) {
   const pr = await getPrices(), taken = new Set();   // ocupados: los que están de verdad en alguna plantilla de la liga
   for (const u of (await redis("SMEMBERS", k("users"))) || []) { if (u === name) continue; const t = await getJ(k("team:") + u); (t ? t.squad || [] : []).forEach(id => taken.add(id)); }
   const mk = await getJ(k("market")); (mk ? mk.items : []).forEach(i => taken.add(i.pid));
-  let best = null;
-  for (let tries = 0; tries < 300; tries++) {
-    const squad = []; let val = 0;
-    for (const [pos, n] of Object.entries(G.START_SQUAD)) {
-      const free = LIGA.players.filter(p => posOf(p.id) === pos && !taken.has(p.id) && !squad.includes(p.id));
-      let pool = free.filter(p => (pr.v[p.id] || 0) <= G.START_MAX).sort(() => Math.random() - 0.5);
-      if (pool.length < n) pool = pool.concat(free.filter(p => !pool.includes(p)).sort((a, b) => (pr.v[a.id] || 0) - (pr.v[b.id] || 0)));   // si no hay baratos, los más baratos que queden
-      pool.slice(0, n).forEach(p => { squad.push(p.id); val += pr.v[p.id] || 0; });
-    }
-    const err = Math.abs(val - G.START_VALUE);
-    if (!best || err < best.err) best = { squad, err };
-    if (err < 3e6) break;
-  }
-  if (best.err > 3e6) {   // si no se ha llegado a ~100 M: probar con los más baratos de cada posición (el mínimo posible)
-    const squad = []; let val = 0;
-    for (const [pos, n] of Object.entries(G.START_SQUAD)) LIGA.players.filter(p => posOf(p.id) === pos && !taken.has(p.id)).sort((a, b) => (pr.v[a.id] || 0) - (pr.v[b.id] || 0)).slice(0, n).forEach(p => { squad.push(p.id); val += pr.v[p.id] || 0; });
-    if (Math.abs(val - G.START_VALUE) < best.err) best = { squad, err: Math.abs(val - G.START_VALUE) };
-  }
+  const best = { squad: dealOne(pr, taken) };
   for (const id of best.squad) await redis("HSET", k("owner"), id, name);
   const t = { name: "", money: G.START_MONEY, squad: best.squad, lineups: {}, daily: "", joined: Date.now(), v3: 1 };
   best.squad.forEach(id => gain(t, id, Math.round((pr.v[id] || 0) * G.CLAUSE_START))); return t;
@@ -339,6 +339,19 @@ module.exports = async (req, res) => {
           for (const id of add) { t.squad.push(id); t.cl = t.cl || {}; t.since = t.since || {}; t.cl[id] = Math.round((pr.v[id] || 0) * G.CLAUSE_START); t.since[id] = t.joined; await redis("HSET", kk("owner"), id, u); }
           await setJ(kk("team:") + u, t);
           await log(kk, "market", `${t.name || u} ha recibido ${add.length} jugador${add.length > 1 ? "es" : ""} que le faltaban del reparto: ${add.map(id => PL[id].n).join(", ")}`); } }
+    }
+    if (await redis("SET", "mig:reset1", "1", "NX")) {   // Aitor (2026-11-23): Liga Almazora C desde cero: 11 jugadores (1-4-4-2) de ~100 M, nadie de más de 20 M, 150 M para fichar
+      for (const k of ["mig:clref", "mig:own1", "mig:fill1", "mig:redeal1", "mig:redeal2", "mig:cl53"]) await redis("SET", k, "1");   // los arreglos anteriores ya no hacen falta
+      const kk = keysOf(LEGACY), pr = await getPrices(), users = ((await redis("SMEMBERS", kk("users"))) || []).sort(() => Math.random() - 0.5);
+      const mk = await getJ(kk("market")); for (const it of (mk ? mk.items : [])) await redis("DEL", kk("bids:") + it.pid);
+      for (const key of ["owner", "market", "offers", "points", "log"]) await redis("DEL", kk(key));
+      const teams = {}; for (const u of users) { const t = await getJ(kk("team:") + u); if (t) teams[u] = t; }
+      const taken = new Set();
+      for (const u of Object.keys(teams)) { const old = teams[u], sq = dealOne(pr, taken); sq.forEach(id => taken.add(id));
+        const t = { name: old.name || "", money: G.START_MONEY, squad: sq, lineups: {}, daily: old.daily || "", joined: Date.now(), v3: 1, favs: old.favs || [], cl: {}, since: {} };
+        sq.forEach(id => { t.cl[id] = Math.round((pr.v[id] || 0) * G.CLAUSE_START); t.since[id] = t.joined; });
+        await setJ(kk("team:") + u, t); for (const id of sq) await redis("HSET", kk("owner"), id, u); }
+      await log(kk, "info", "Liga reiniciada desde cero: cada equipo tiene 11 jugadores (1 portero, 4 defensas, 4 medios y 2 delanteros) de unos 100 M y 150 M para fichar.");
     }
     if (await redis("SET", "mig:redeal2", "1", "NX")) await redis("DEL", "mig:redeal1");   // otra pasada para arnau y catala12, que seguían caros
     if (await redis("SET", "mig:redeal1", "1", "NX")) {   // una vez: plantillas del reparto que se fueron de valor por el fallo de dueños antiguos → se reparten otra vez (~100 M)

@@ -8,10 +8,10 @@
     CLAUSE_START: 5 / 3,      // cláusula de los jugadores del reparto inicial = valor × 5/3 (como LaLiga Fantasy)
     DEBT: 0.2,                // en pujas a LIGA se puede quedar en negativo hasta el 20 % del valor del equipo
     POINTS_FROM: 10,          // los equipos ganan puntos y dinero desde la jornada 10
-    START_MONEY: 100000000,    // dinero al entrar (100 M)
+    START_MONEY: 150000000,    // dinero al entrar (150 M)
     START_VALUE: 100000000,    // valor aproximado de la plantilla inicial (100 M)
-    START_MAX: 30000000,       // en la plantilla inicial no toca nadie que valga más de 30 M
-    START_SQUAD: { POR: 2, DEF: 5, CEN: 5, DEL: 3 },   // plantilla aleatoria al entrar (15)
+    START_MAX: 20000000,       // en la plantilla inicial no toca nadie que valga más de 20 M
+    START_SQUAD: { POR: 1, DEF: 4, CEN: 4, DEL: 2 },   // plantilla aleatoria al entrar (11)
     MAX_SQUAD: 20,
     DAILY: 100000,             // recompensa diaria
     PER_POINT: 100000,         // € por punto en la jornada
