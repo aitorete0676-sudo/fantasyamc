@@ -186,6 +186,11 @@ async function newTeam(k, name) {
     if (!best || err < best.err) best = { squad, err };
     if (err < 3e6) break;
   }
+  if (best.err > 3e6) {   // si no se ha llegado a ~100 M: probar con los más baratos de cada posición (el mínimo posible)
+    const squad = []; let val = 0;
+    for (const [pos, n] of Object.entries(G.START_SQUAD)) LIGA.players.filter(p => posOf(p.id) === pos && !taken.has(p.id)).sort((a, b) => (pr.v[a.id] || 0) - (pr.v[b.id] || 0)).slice(0, n).forEach(p => { squad.push(p.id); val += pr.v[p.id] || 0; });
+    if (Math.abs(val - G.START_VALUE) < best.err) best = { squad, err: Math.abs(val - G.START_VALUE) };
+  }
   for (const id of best.squad) await redis("HSET", k("owner"), id, name);
   const t = { name: "", money: G.START_MONEY, squad: best.squad, lineups: {}, daily: "", joined: Date.now(), v3: 1 };
   best.squad.forEach(id => gain(t, id, Math.round((pr.v[id] || 0) * G.CLAUSE_START))); return t;
@@ -335,6 +340,7 @@ module.exports = async (req, res) => {
           await setJ(kk("team:") + u, t);
           await log(kk, "market", `${t.name || u} ha recibido ${add.length} jugador${add.length > 1 ? "es" : ""} que le faltaban del reparto: ${add.map(id => PL[id].n).join(", ")}`); } }
     }
+    if (await redis("SET", "mig:redeal2", "1", "NX")) await redis("DEL", "mig:redeal1");   // otra pasada para arnau y catala12, que seguían caros
     if (await redis("SET", "mig:redeal1", "1", "NX")) {   // una vez: plantillas del reparto que se fueron de valor por el fallo de dueños antiguos → se reparten otra vez (~100 M)
       const pr = await getPrices();
       for (const code of Object.keys(leagues)) { const kk = keysOf(code);
