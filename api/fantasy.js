@@ -170,7 +170,8 @@ function currentJ(J) {
 
 /* ---------- equipo nuevo: 100 M y una plantilla aleatoria de unos 100 M ---------- */
 async function newTeam(k, name) {
-  const pr = await getPrices(), owner = (await redis("HGETALL", k("owner"))) || [], taken = new Set(owner.filter((_, i) => i % 2 === 0));
+  const pr = await getPrices(), taken = new Set();   // ocupados: los que están de verdad en alguna plantilla de la liga
+  for (const u of (await redis("SMEMBERS", k("users"))) || []) { if (u === name) continue; const t = await getJ(k("team:") + u); (t ? t.squad || [] : []).forEach(id => taken.add(id)); }
   const mk = await getJ(k("market")); (mk ? mk.items : []).forEach(i => taken.add(i.pid));
   let best = null;
   for (let tries = 0; tries < 300; tries++) {
@@ -311,6 +312,13 @@ module.exports = async (req, res) => {
           t.money += paid; if (t.cl && t.cl[id]) t.cl[id] = Math.max(0, t.cl[id] - paid * G.CLAUSE_X); ch.add(u);
           await log(kk, "market", `Se han devuelto ${paid.toLocaleString("es-ES")}€ a ${t.name || u} por subir la cláusula de ${PL[id].n}`); }
         for (const u of ch) await setJ(kk("team:") + u, teams[u]); }
+    }
+    if (await redis("SET", "mig:own1", "1", "NX")) {   // una vez: se limpian dueños antiguos (jugadores que figuran con dueño pero no están en ninguna plantilla)
+      for (const code of Object.keys(leagues)) { const kk = keysOf(code), arr = (await redis("HGETALL", kk("owner"))) || [], sq = {};
+        for (const u of (await redis("SMEMBERS", kk("users"))) || []) { const t = await getJ(kk("team:") + u); if (t) sq[u] = new Set(t.squad || []); }
+        for (let i = 0; i < arr.length; i += 2) { const pid = arr[i], u = arr[i + 1]; if (!sq[u] || !sq[u].has(pid)) await redis("HDEL", kk("owner"), pid); }
+        for (const [u, set] of Object.entries(sq)) for (const pid of set) await redis("HSET", kk("owner"), pid, u); }
+      await redis("DEL", "mig:fill1");   // y se vuelve a completar a quien le falten, ya con los libres de verdad
     }
     if (await redis("SET", "mig:fill1", "1", "NX")) {   // una vez: a quien le falten jugadores del reparto (2 POR, 5 DEF, 5 CEN, 3 DEL) se le completan
       const pr = await getPrices();
