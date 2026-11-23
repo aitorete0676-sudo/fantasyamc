@@ -130,6 +130,7 @@ async function tick(k) {
       const keep = [];
       for (const it of market.items) {
         if (it.ends > Date.now()) { keep.push(it); continue; }
+        if (it.seller !== "LIGA") { await redis("DEL", k("bids:") + it.pid); await redis("HINCRBY", "uns", it.pid, 1); continue; }   // los de mánagers no se venden al mejor postor: solo si el dueño acepta una oferta; a las 48 h vuelve a su equipo
         const bids = await hgetall(k("bids:") + it.pid); await redis("DEL", k("bids:") + it.pid);
         const list = Object.entries(bids).map(([u, b]) => ({ u, ...b })).sort((a, b) => b.amount - a.amount || a.at - b.at);
         if (list.length) await redis("HINCRBY", "dem", it.pid, list.length);
@@ -610,6 +611,7 @@ module.exports = async (req, res) => {
       const market = await getJ(k("market")), it = (market ? market.items : []).find(i => i.pid === b.pid);
       if (!it || it.ends <= Date.now()) return send(400, { error: "Ese jugador ya no está en el mercado." });
       if (it.seller === me.name) return send(400, { error: "No puedes pujar por tu propio jugador." });
+      if (it.seller !== "LIGA" && b.amount != null && +b.amount !== 0) return send(400, { error: "A los jugadores de otros mánagers se les hace una oferta de compra." });
       if (b.amount == null || +b.amount === 0) { await redis("HDEL", k("bids:") + b.pid, me.name); return send(200, { ok: true }); }
       const amount = Math.round(+b.amount);
       const minBid = Math.max(it.price, (await getPrices()).v[b.pid] || 0);   // nunca por debajo del valor del jugador
