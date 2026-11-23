@@ -61,7 +61,9 @@ async function joinLeague(code, name) {
 
 /* ---------- precios ---------- */
 // prices = { day, v:{id:valor}, prev:{id:valor de ayer}, h:{id:[últimos 30 valores]}, pub:[jornadas ya aplicadas] }
-async function getPrices() {   // precios únicos para todas las ligas
+let PRC = null;
+async function getPrices() {   // precios únicos para todas las ligas (una sola lectura por petición)
+  if (PRC) return PRC;
   let pr = await getJ("prices");
   if (!pr) { pr = { day: G.day(Date.now()), v: {}, prev: {}, h: {}, pub: [] };
     LIGA.players.forEach(p => { const v = G.baseValue(seasonPts(p.id)); pr.v[p.id] = v; pr.prev[p.id] = v; pr.h[p.id] = [v]; });
@@ -71,7 +73,7 @@ async function getPrices() {   // precios únicos para todas las ligas
       pr.v[p.id] = Math.max(300000, Math.round(base * ratio / 10000) * 10000); pr.prev[p.id] = base; pr.h[p.id] = [base, pr.v[p.id]].filter((x, i, a) => i === 0 || x !== a[0]); });
     pr.ver = G.PRICE_VER; await setJ("prices", pr);
   }
-  return pr;
+  PRC = pr; return pr;
 }
 
 /* ---------- precios del día (iguales en todas las ligas) ----------
@@ -260,7 +262,7 @@ async function autoJornada(leagues, force, cron) {
 }
 
 module.exports = async (req, res) => {
-  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("Cache-Control", "no-store"); PRC = null;
   const send = (code, obj) => res.status(code).json(obj);
   if (!URL_ || !TOKEN) return send(500, { error: "Falta conectar la base de datos: en Vercel ve a Storage > Upstash for Redis > Connect y vuelve a desplegar." });
   try {
@@ -296,7 +298,9 @@ module.exports = async (req, res) => {
     const me = await whoami(req);
     if (!me) return send(401, { error: "Sesión caducada. Vuelve a entrar." });
     const admin = me.admin || norm(process.env.ADMIN_USER) === me.name;
-    const leagues = await allLeagues();
+    const MIGV = "2026-11-23c";   // subir esto al añadir una migración nueva; así no se comprueban todas en cada carga
+    const [leagues, migV] = await Promise.all([allLeagues(), redis("GET", "mig:ver")]);
+    if (migV !== MIGV) {
     if (await redis("SET", "mig:clref", "1", "NX")) {   // una vez: se devuelve lo pagado por subir cláusulas y se deshace la subida
       const pr = await getPrices(), today = G.day(Date.now());
       const valAt = (id, at) => { const h = pr.h[id] || [], ago = Math.round((Date.parse(today) - Date.parse(G.day(at))) / 864e5); return h[Math.max(0, h.length - 1 - ago)] || pr.v[id] || 0; };
@@ -446,7 +450,8 @@ module.exports = async (req, res) => {
           for (const id of t.squad || []) { const sn = (t.since || {})[id]; if (sn && t.joined && Math.abs(sn - t.joined) < 60e3) { t.cl = t.cl || {}; t.cl[id] = Math.round((pr.v[id] || 0) * G.CLAUSE_START); ch = 1; } }
           if (ch) await setJ(kk("team:") + u, t); } }
     }
-    let mineL = await myLeagues(me.name);
+    await redis("SET", "mig:ver", MIGV); }
+    let mineL = me.leagues || await myLeagues(me.name);
 
     // ---- crear liga / unirse con código ----
     if (a === "createLeague") {
@@ -492,9 +497,10 @@ module.exports = async (req, res) => {
       const [pr, market, points, logs, ownerArr] = await Promise.all([getPrices(), getJ(k("market")), hgetall(k("points")), redis("LRANGE", k("log"), 0, 149), redis("HGETALL", k("owner"))]);
       const owner = {}; for (let i = 0; i < (ownerArr || []).length; i += 2) owner[ownerArr[i]] = ownerArr[i + 1];
       const teams = {};
-      for (const u of users) { const t = u === me.name ? mine : await getJ(k("team:") + u); if (!t) continue;
+      const tms = await Promise.all(users.map(u => u === me.name ? mine : getJ(k("team:") + u)));
+      for (const [i, u] of users.entries()) { const t = tms[i]; if (!t) continue;
         teams[u] = { name: t.name, squad: t.squad, lineups: t.lineups, cl: Object.fromEntries(t.squad.map(id => [id, clauseOf(t, id, pr)])), since: t.since || {}, joined: t.joined || 0, snap: t.snap || {} }; }   // el dinero de los demás no se enseña
-      const myBids = {}, nb = {}; for (const it of (market ? market.items : [])) { const all = await hgetall(k("bids:") + it.pid); nb[it.pid] = Object.keys(all).length; if (all[me.name]) myBids[it.pid] = all[me.name].amount; }
+      const myBids = {}, nb = {}, mItems = market ? market.items : [], allB = await Promise.all(mItems.map(it => hgetall(k("bids:") + it.pid))); for (const [bi, it] of mItems.entries()) { const all = allB[bi]; nb[it.pid] = Object.keys(all).length; if (all[me.name]) myBids[it.pid] = all[me.name].amount; }
       const offersIn = [], offersOut = []; for (const [f, o] of Object.entries(await hgetall(k("offers")))) {
         if (owner[o.pid] !== o.to) { await redis("HDEL", k("offers"), f); continue; }
         if (o.to === me.name) offersIn.push(o); else if (o.from === me.name) offersOut.push(o); }
@@ -580,7 +586,7 @@ module.exports = async (req, res) => {
       const amount = Math.round(+b.amount);
       const minBid = Math.max(it.price, (await getPrices()).v[b.pid] || 0);   // nunca por debajo del valor del jugador
       if (!(amount >= minBid)) return send(400, { error: "No puedes pujar por menos de su valor: " + minBid.toLocaleString("es-ES") + " €." });
-      let others = 0; for (const x of market.items) { if (x.pid === b.pid) continue; const v = await redis("HGET", k("bids:") + x.pid, me.name); if (v) others += JSON.parse(v).amount; }
+      let others = 0; (await Promise.all(market.items.filter(x => x.pid !== b.pid).map(x => redis("HGET", k("bids:") + x.pid, me.name)))).forEach(v => { if (v) others += JSON.parse(v).amount; });
       const lim = canSpend(mine, await getPrices(), it.seller === "LIGA");
       if (amount + others > lim) return send(400, { error: it.seller === "LIGA" ? "La cantidad pujada sobrepasa tu endeudamiento permitido (20% valor de tu equipo)." : "Con tus otras pujas no te llega el saldo (" + mine.money.toLocaleString("es-ES") + " €)." });
       if (mine.squad.length >= G.MAX_SQUAD) return send(400, { error: "Tienes el máximo de " + G.MAX_SQUAD + " jugadores." });

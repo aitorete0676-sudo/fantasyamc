@@ -454,9 +454,9 @@ async function api(action, body) {
   return j;
 }
 let busy = false;
-async function refresh() {
+async function refresh(pre) {
   if (busy) return; busy = true;
-  try { const st = await api("state"); S.skew = st.now - Date.now(); S.st = st; S.store = "ok"; if (st.lg !== LG) setLg(st.lg);
+  try { const p0 = pre && await pre; if (p0 instanceof Error) throw p0; const st = p0 || await api("state"); S.skew = st.now - Date.now(); S.st = st; S.store = "ok"; if (st.lg !== LG) setLg(st.lg);
     if (st.lg && st.team && st.team.joined && st.team.pres !== st.team.joined && (st.team.squad || []).length && (!S.sheet || S.sheet.t !== "present")) {   // la presentación solo la primera vez (se apunta en el servidor)
       let seen = false; try { seen = !!localStorage.getItem("pres:" + st.lg + ":" + st.team.joined); } catch (e) {}
       if (seen) markPresented(); else if (!S.sheet) S.sheet = { t: "present" }; }
@@ -470,10 +470,11 @@ async function act(action, body, okMsg) {
 }
 async function boot() {
   fetch("/fotos.json").then(r => r.ok ? r.json() : []).then(a => { a.forEach(id => FOTOS.add(String(id))); if (S.store === "ok") render(); }).catch(() => {});
+  const st0 = tok() ? api("state").catch(e => e) : null;   // a la vez que liga.json: carga más rápido
   try { const r = await fetch("/liga.json"); S.liga = await r.json(); S.liga.players.forEach(p => PMAP[p.id] = p); }
   catch (e) { document.getElementById("main").innerHTML = '<div class="empty">No se han podido cargar los datos de la liga.</div>'; return; }
   if (!tok()) { S.store = "auth"; return render(); }
-  await refresh();
+  await refresh(st0);
   setInterval(() => { if (!document.hidden && !S.sheet && !document.querySelector("input:focus")) refresh(); }, 15000);
   setInterval(tickTimers, 1000);
 }
@@ -1066,8 +1067,9 @@ document.addEventListener("click", async e => {
   if (a === "bidclr") { const i = document.getElementById("bidv"); i.value = ""; i.focus(); return; }
   if (a === "dobid") { const v = +String(document.getElementById("bidv").value).replace(/\D/g, ""); const id = S.sheet.id, it = S.st.market.find(i => i.pid === id), mn = it ? Math.max(it.price, val(id)) : 0;
     if (!(v >= mn)) return toast("No puedes pujar por menos de su valor: " + eur(mn) + " €.");
-    try { await api("bid", { pid: id, amount: v }); } catch (e) { return /endeudamiento/.test(e.message) ? aviso(e.message) : toast(e.message); }
-    toastOk("Has pujado " + eur(v) + " € por " + PL(id).n); S.sheet = S.sheet && S.sheet.prev || null; await refresh(); return; }
+    const gb = document.querySelector('[data-act="dobid"]'); if (gb) { if (gb.disabled) return; gb.disabled = true; gb.textContent = "Pujando…"; }
+    try { await api("bid", { pid: id, amount: v }); } catch (e) { if (gb) { gb.disabled = false; gb.textContent = "Hacer puja"; } return /endeudamiento/.test(e.message) ? aviso(e.message) : toast(e.message); }
+    S.st.myBids[id] = v; toastOk("Has pujado " + eur(v) + " € por " + PL(id).n); S.sheet = S.sheet && S.sheet.prev || null; render(); refresh(); return; }
   if (a === "nobid") { const id = S.sheet.id; S.sheet = null; return act("bid", { pid: id, amount: 0 }, "Puja retirada"); }
   if (a === "offerask") { S.sheet.confirm = true; return renderSheet(); }
   if (a === "offerok") { const id = S.sheet.id, it = S.st.market.find(i => i.pid === id && i.seller === S.st.me); S.sheet = null; return act("acceptOffer", { pid: id }, "Vendido a LIGA por " + eur(it ? it.offer : 0) + " €"); }
