@@ -185,6 +185,15 @@ select.form{background:var(--card);color:var(--fg);border:0;padding:10px 12px;fo
 .pc .fr .ck{position:absolute;right:3px;bottom:3px;z-index:3;width:16px;height:16px}
 .pc .fr .nm{background:#f4f5f7;color:#14151b;font-size:10px;padding:3px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pres .pgo{margin-top:auto;padding:16px 0 calc(16px + env(safe-area-inset-bottom,0px))}.pres .pgo button{display:block;width:calc(100% - 24px);max-width:616px;margin:0 auto;background:#e5352b;color:#fff;font-weight:700;font-size:16px;padding:14px}
+.page.zin{animation:zin .3s ease-out both}.page.zout{animation:zout .25s ease-in both}
+@keyframes zin{from{transform:scale(.15);opacity:.2;border-radius:30px}to{transform:none;opacity:1}}@keyframes zout{from{transform:none;opacity:1}to{transform:scale(.15);opacity:0}}
+.pk{max-width:640px;margin:0 auto}.pk .shd{display:grid;grid-template-columns:44px 1fr auto;align-items:center;padding:calc(10px + env(safe-area-inset-top,0px)) 12px 10px}
+.pk .shd h1{font-size:17px;margin:0;text-align:center}.pk .shd button svg{width:24px;height:24px;fill:none;stroke:#fff;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.pk .pkv{background:#2a2c35;border-radius:18px;padding:8px 14px;font-size:14px}.pk .pkv[disabled]{opacity:.4}
+.pkcur{margin:4px 8px 0;border:2px solid #e5352b}.pkcur .pcard{margin:0}.pkemp{height:118px;background:#23252f;display:flex;align-items:center;padding-left:14px}.pkemp .face{width:80px;height:90px;display:grid;place-items:center}.pkemp svg.sil{width:70px;fill:#3c404d}
+.pksw{display:flex;justify-content:center;gap:2px;padding:10px 0 18px}.pksw i{width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent}.pksw i.dn{border-top:9px solid #e5534b}.pksw i.up{border-bottom:9px solid #3fb950}
+.pkopt{position:relative;margin:0 8px;cursor:pointer}.pkopt .pcard{margin-bottom:10px}
+.pkno{padding-top:30px;text-align:center;color:#9aa0ad}
 .sell{max-width:640px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;background:#14151b}
 .sell .shd{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;padding:calc(14px + env(safe-area-inset-top,0px)) 14px 10px}
 .sell .shd h1{font-size:17px;font-weight:700;margin:0;text-align:center}
@@ -429,7 +438,9 @@ async function api(action, body) {
 let busy = false;
 async function refresh() {
   if (busy) return; busy = true;
-  try { const st = await api("state"); S.skew = st.now - Date.now(); S.st = st; S.store = "ok"; if (st.lg !== LG) setLg(st.lg); render(); }
+  try { const st = await api("state"); S.skew = st.now - Date.now(); S.st = st; S.store = "ok"; if (st.lg !== LG) setLg(st.lg);
+    if (st.lg && st.team && st.team.joined && (st.team.squad || []).length && !S.sheet) { const key = "pres:" + st.lg + ":" + st.team.joined; let seen = true; try { seen = !!localStorage.getItem(key); localStorage.setItem(key, "1"); } catch (e) {} if (!seen) S.sheet = { t: "present" }; }
+    render(); }
   catch (e) { if (e.status === 401) { S.store = "auth"; render(); } }
   busy = false;
 }
@@ -552,7 +563,7 @@ function lockCell(id) {
 function pcard(id, mode, item) {
   const p = PL(id), se = seasonOf(id), js = allJ().slice(-5), v = val(id), prev = S.st.prices.prev[id] || v;
   const boxes = js.map(J => { const m = GAME.mins(J, id), pt = ptsOf(id, J); return `<i class="${!(m > 0) ? "x" : pt > 4 ? "p" : pt > 0 ? "z" : "n"}">${m > 0 ? pt : "–"}</i>`; }).join("");
-  const inL = mode === "squad" && myLineup().s.includes(id), d = v - prev;
+  const inL = (mode === "squad" || mode === "pick") && myLineup().s.includes(id), d = v - prev;
   const trend = d ? `<span class="trend ${d > 0 ? "up" : "dn"}">${d > 0 ? "▲ +" : "▼ "}${eur(d)}</span>` : `<span class="trend" style="color:var(--muted)">=</span>`;
   let mid, btn;
   if (mode === "market") {
@@ -564,7 +575,7 @@ function pcard(id, mode, item) {
     const listed = S.st.market.some(i => i.pid === id && i.seller === S.st.me);
     mid = `<div class="ln"><span class="ck">${CHK}</span>Alineable</div><div class="rt">MEDIA: <b>${se.media.toFixed(2).replace(".", ",")}</b></div>
       <div class="ln"><span class="coin">€</span>${eur(v)}</div><div class="rt">${lockCell(id)}</div>`;
-    btn = listed ? `<button class="abtn sm" data-unlist="${id}">Quitar</button>` : `<button class="abtn sm" data-acts="${id}">Acciones</button>`;
+    btn = mode === "pick" ? "" : listed ? `<button class="abtn sm" data-unlist="${id}">Quitar</button>` : `<button class="abtn sm" data-acts="${id}">Acciones</button>`;
   }
   return `<div class="pcard"><button class="ph" data-ficha="${id}" aria-label="Ver ficha de ${esc(p.n)}">${shirt(p, 70)}${inL ? `<span class="inxi">${CHK}</span>` : ""}<span class="tm">${crest(p.t)}${esc(team(p.t).short)}</span></button><div class="bd">
     <button class="tt" data-ficha="${id}"><span class="pos ${posOf(id)}">${posOf(id)}</span><b>${esc(p.n)}</b></button><div class="big">PFSY<b>${se.pf}</b></div>
@@ -822,11 +833,8 @@ function renderSheet() {
   if (sh.t === "ficha") body = fichaView(sh.id);
   else if (sh.t === "ofr") body = ofrView(sh);
   else if (sh.t === "sell") body = sellView(sh.id);
-  else if (sh.t === "pick") {
-    const l = myLineup(), cur_ = l.s[sh.idx], opts = mySquad().filter(id => posOf(id) === sh.pos && (!l.s.includes(id) || id === cur_));
-    body = `<h3>Elige ${POSN[sh.pos].toLowerCase()}</h3>${opts.length ? opts.map(id => `<button class="opt" data-pick="${id}"><b>${esc(PL(id).n)}${id === cur_ ? " ✓" : ""}</b><span>${esc(team(PL(id).t).short)} · ${seasonOf(id).pf} pts</span></button>`).join("") : `<p class="note">No tienes ${POSN[sh.pos].toLowerCase()}s libres. Puja en el Mercado.</p>`}
-      ${cur_ ? `<button class="opt" data-ficha="${cur_}"><b>Ver ficha de ${esc(PL(cur_).n)}</b></button><button class="opt red" data-pick=""><b>Quitar de la alineación</b></button>` : ""}`;
-  } else if (sh.t === "bid") {
+  else if (sh.t === "pick") body = pickView(sh);
+  else if (sh.t === "bid") {
     const it = S.st.market.find(i => i.pid === sh.id), my = S.st.myBids[sh.id], mn = it ? Math.max(it.price, val(sh.id)) : 0;
     body = it ? `<h3>Pujar por ${esc(PL(sh.id).n)}</h3><p class="note">Valor ${eur(val(sh.id))} €. Puja mínima ${eur(mn)} €: no se puede pujar por menos de su valor. Se resuelve el ${fmtWhen(it.ends)}. Saldo: ${eur(S.st.team.money)} €.</p>
       <div class="fld"><label for="bidv">Tu puja (€)</label><input id="bidv" class="inp" type="number" inputmode="numeric" min="${mn}" step="10000" value="${Math.max(my || 0, mn)}"></div>
@@ -860,7 +868,7 @@ function renderSheet() {
   else if (sh.t === "mof") body = mofView(sh.id);
   else if (sh.t === "present") { el.innerHTML = presentView(); return; }
   const sc = el.querySelector(".in,.page"), scroll = sc ? sc.scrollTop : 0;
-  el.innerHTML = sh.t === "ficha" || sh.t === "ofr" || sh.t === "sell" || sh.t === "rival" || sh.t === "mof" ? `<div class="page">${body}</div>` : sh.ios ? `<div class="sheet ios" data-close="1">${body}</div>` : `<div class="sheet" data-close="1"><div class="in${sh.t === "search" ? " tall" : ""}">${body}<button class="gbtn" data-close="1" style="width:100%;margin-top:10px">Cerrar</button></div></div>`;
+  el.innerHTML = sh.t === "ficha" || sh.t === "ofr" || sh.t === "sell" || sh.t === "rival" || sh.t === "mof" || sh.t === "pick" ? `<div class="page${sh.t === "pick" ? " zin" + (sh.out ? " zout" : "") : ""}" style="${sh.t === "pick" && sh.o ? "transform-origin:" + sh.o : ""}">${body}</div>` : sh.ios ? `<div class="sheet ios" data-close="1">${body}</div>` : `<div class="sheet" data-close="1"><div class="in${sh.t === "search" ? " tall" : ""}">${body}<button class="gbtn" data-close="1" style="width:100%;margin-top:10px">Cerrar</button></div></div>`;
   if (sh.keep) el.querySelector(".in,.page").scrollTop = scroll;
   const js = el.querySelector(".jstrip"), on = js && js.querySelector(".jbox.on"); if (on) js.scrollLeft = on.offsetLeft - js.clientWidth / 2 + on.offsetWidth / 2;
   if (sh.t === "search" && !sh.keep) { const i = document.getElementById("sq"); i.focus(); }
@@ -929,6 +937,15 @@ function presentView() {
     <div class="pgo"><button data-pgo="1">Continuar</button></div></div>`;
 }
 
+// Cambiar jugador (como LaLiga Fantasy): pantalla que se abre desde el hueco del campo; arriba el que está, debajo los demás de su posición
+function pickView(sh) {
+  const l = myLineup(), cur_ = l.s[sh.idx], opts = mySquad().filter(id => posOf(id) === sh.pos && !l.s.includes(id));
+  const top = cur_ && PL(cur_) ? `<div class="pkcur">${pcard(cur_, "pick")}</div>` : `<div class="pkcur pkemp"><div class="face">${SIL}</div></div>`;
+  return `<div class="pk"><div class="shd"><button data-pkback="1" aria-label="Volver"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><h1>Cambiar jugador</h1><button class="pkv" data-pick="" ${cur_ ? "" : "disabled"}>Vaciar</button></div>
+    ${top}<div class="pksw"><i class="dn"></i><i class="up"></i></div>
+    ${opts.length ? opts.map(id => `<div class="pkopt" data-pick="${id}">${pcard(id, "pick")}</div>`).join("") : `<div class="vacio pkno"><svg viewBox="0 0 120 120" width="120"><circle cx="52" cy="52" r="30" fill="#8b5cf6"/><circle cx="52" cy="52" r="20" fill="#cfd3dc"/><path d="M74 74l26 26" stroke="#8b5cf6" stroke-width="10" stroke-linecap="round"/><circle cx="86" cy="86" r="16" fill="#e5534b"/><path d="M80 80l12 12M92 80l-12 12" stroke="#14151b" stroke-width="4"/></svg><p>No tienes más jugadores en esta posición</p></div>`}</div>`;
+}
+
 // Fijar el precio de venta (como LaLiga Fantasy)
 const fmtN = v => String(Math.max(0, Math.round(v || 0))).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 function sellView(id) {
@@ -942,11 +959,12 @@ function sellView(id) {
 
 /* ---------- eventos ---------- */
 function aviso(m) { const d = document.createElement("div"); d.className = "cfm avx"; d.dataset.avx = "1"; d.innerHTML = `<div class="cfb"><h3>Aviso</h3><p>${esc(m)}</p><button data-avx="1">Cerrar</button></div>`; document.body.appendChild(d); }
+function pickClose() { if (!S.sheet || S.sheet.t !== "pick") return; S.sheet.out = 1; renderSheet(); setTimeout(() => { if (S.sheet && S.sheet.t === "pick") { S.sheet = null; render(); } }, 260); }
 let toastT; function toastOk(m) { toast(m); const t = document.getElementById("toast"); t.classList.add("ok"); t.innerHTML = `<span>${esc(m)}</span><button data-tx="1" aria-label="Cerrar">×</button>`; }
 function toast(m) { const t = document.getElementById("toast"); t.classList.remove("ok"); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2800); }
 function saveLineup(l) { return act("lineup", { f: l.f, s: l.s, c: l.c }); }
 document.addEventListener("click", async e => {
-  const b = e.target.closest("button,[data-close],[data-rmenu],[data-rclno],[data-avx]"); if (!b) return; const d = b.dataset;
+  const b = e.target.closest(".pkopt") || e.target.closest("button,[data-close],[data-rmenu],[data-rclno],[data-avx]"); if (!b) return; const d = b.dataset;
   if (d.pgo) { S.sheet = null; return render(); }
   if (d.avx) { if (e.target !== b) return; b.closest(".avx").remove(); return; }
   if (d.tx) { document.getElementById("toast").hidden = true; return; }
@@ -991,9 +1009,13 @@ document.addEventListener("click", async e => {
     const l = myLineup(), id = l.s[+d.slot];
     if (locked()) { if (id) { S.sheet = { t: "ficha", id }; renderSheet(); } return; }
     if (S.capMode) { if (!id) return; S.capMode = false; await saveLineup({ ...l, c: id }); return toast("Capitán: " + PL(id).n); }
-    S.sheet = { t: "pick", idx: +d.slot, pos: d.pos }; return renderSheet();
+    const r = b.getBoundingClientRect(); S.sheet = { t: "pick", idx: +d.slot, pos: d.pos, o: Math.round(r.left + r.width / 2) + "px " + Math.round(r.top + r.height / 2) + "px" }; return renderSheet();
   }
-  if (d.pick != null) { const l = myLineup(), s = l.s.slice(); s[S.sheet.idx] = d.pick || null; S.sheet = null; return saveLineup({ f: l.f, s, c: s.includes(l.c) ? l.c : null }); }
+  if (d.pkback) { return pickClose(); }
+  if (d.pick != null) { const l = myLineup(), s = l.s.slice(); s[S.sheet.idx] = d.pick || null;
+    const card = b.classList.contains("pkopt") ? b : null, top = document.querySelector(".pkcur");
+    if (card && top) { const a = card.getBoundingClientRect(), t = top.getBoundingClientRect(); card.style.transition = "transform .35s ease"; card.style.transform = `translateY(${t.top - a.top}px)`; card.style.zIndex = 3; top.style.transition = "opacity .25s"; top.style.opacity = 0; }
+    saveLineup({ f: l.f, s, c: s.includes(l.c) ? l.c : null }); setTimeout(pickClose, card ? 380 : 0); return; }
   const a = d.act;
   if (a === "daily") return act("daily", {}, "+" + eur(GAME.DAILY) + " €");
   if (a === "cap") { S.capMode = !S.capMode; return render(); }
