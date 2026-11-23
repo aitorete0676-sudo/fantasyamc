@@ -1,4 +1,24 @@
 {
-  "headers": [{ "source": "/(.*)", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }],
-  "crons": [{ "path": "/api/fantasy?cron=1", "schedule": "0 11 * * 1" }]
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/fantasy?cron=1",
+      "schedule": "0 11 * * 1"
+    }
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "fotos-pendientes": false
+    }
+  }
 }
