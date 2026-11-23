@@ -142,6 +142,7 @@ select.form{background:var(--card);color:var(--fg);border:0;padding:10px 12px;fo
 .cfm{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.55);display:grid;place-items:center;padding:16px}
 .cfb{background:#fff;color:#14151b;border-radius:14px;padding:22px 18px 18px;width:100%;max-width:360px}
 .cfb h3{font-size:20px;margin:0 0 16px}.cfb p{color:#333;font-size:15px;line-height:1.35;margin:0 0 18px}.cfb p b{color:#14151b}
+.avx .cfb{padding:22px 0 0;text-align:center}.avx .cfb h3{margin-bottom:10px}.avx .cfb p{color:#6b6f7b;font-size:17px;padding:0 18px 26px;margin:0}.avx .cfb button{display:block;width:100%;border-top:1px solid #ddd;padding:16px;color:#16a34a;font-size:19px;font-weight:600}
 .cfr{display:grid;grid-template-columns:1fr 1fr;gap:10px}.cfr button{background:#eee;border-radius:22px;padding:12px;font-size:16px;color:#14151b}
 .toast.ok{background:#43a537;color:#fff;font-weight:500;display:flex;justify-content:space-between;align-items:center;gap:16px;width:calc(100% - 32px);padding:14px 16px}
 .toast.ok button{color:#fff;font-size:22px;line-height:1}
@@ -164,6 +165,25 @@ select.form{background:var(--card);color:var(--fg);border:0;padding:10px 12px;fo
 .rj.on{background:#18a33a;color:#fff;width:48px;height:48px}.rj small{display:block;font-size:11px;font-weight:600}
 .iosm button.dis{color:rgba(20,21,27,.35)}
 .spill .clr{width:30px;height:30px;border-radius:50%;background:#14151b;display:grid;place-items:center;flex:none;color:#fff;font-size:18px;line-height:1}
+.pres{position:fixed;inset:0;z-index:70;background:#0e0f15 repeating-linear-gradient(115deg,transparent 0 120px,rgba(255,255,255,.025) 120px 220px);display:flex;flex-direction:column;overflow-y:auto}
+.pres h1{font-size:17px;font-weight:700;text-align:center;margin:0;padding:calc(16px + env(safe-area-inset-top,0px)) 0 14px}
+.pres .pbar{display:flex;align-items:center;gap:10px;background:#23252f;padding:6px 10px;max-width:640px;width:100%;margin:0 auto}
+.pres .pbar .rav{width:34px;height:34px;border-radius:50%;background:#d8dade;color:#6b6f7b;display:grid;place-items:center;font-weight:800}
+.pres .pbar b{flex:1;font-weight:500;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pres .pbar small{font-weight:900;font-size:10px;letter-spacing:.3px}
+.pres .pg{display:grid;grid-template-columns:repeat(4,1fr);gap:14px 8px;padding:14px 16px;max-width:640px;width:100%;margin:0 auto}
+.pres .pinf{grid-column:span 2;font-size:15px;font-weight:600}.pres .pinf small{display:block;color:#8d92a0;font-size:10px;font-weight:700;margin-top:4px}.pres .pinf div{margin-bottom:10px}
+.pres .pinf .coin{width:14px;height:14px;font-size:9px;margin-left:4px;vertical-align:-1px}
+.pc{position:relative;aspect-ratio:3/4.1;perspective:600px}
+.pc .bk,.pc .fr{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.pc .bk{background:#262833;display:grid;place-items:center;color:#3a3d49;font-weight:900;font-size:11px;letter-spacing:.5px}
+.pc .fr{background:#2a2c37;display:flex;flex-direction:column;transform:rotateY(180deg)}
+.pc.go .bk{animation:pcb .45s forwards;animation-delay:var(--d)}.pc.go .fr{animation:pcf .45s forwards;animation-delay:var(--d)}
+@keyframes pcb{to{transform:rotateY(-180deg)}}@keyframes pcf{to{transform:rotateY(0)}}
+.pc .fr .ph{flex:1;position:relative;overflow:hidden;display:grid;place-items:end center}.pc .fr .ph .shirt:not(.foto){width:80%}
+.pc .fr .ph .crest{position:absolute;top:3px;right:3px;width:14px;z-index:2}
+.pc .fr .ck{position:absolute;right:3px;bottom:3px;z-index:3;width:16px;height:16px}
+.pc .fr .nm{background:#f4f5f7;color:#14151b;font-size:10px;padding:3px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pres .pgo{margin-top:auto;padding:16px 0 calc(16px + env(safe-area-inset-bottom,0px))}.pres .pgo button{display:block;width:calc(100% - 24px);max-width:616px;margin:0 auto;background:#e5352b;color:#fff;font-weight:700;font-size:16px;padding:14px}
 .sell{max-width:640px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;background:#14151b}
 .sell .shd{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;padding:calc(14px + env(safe-area-inset-top,0px)) 14px 10px}
 .sell .shd h1{font-size:17px;font-weight:700;margin:0;text-align:center}
@@ -680,7 +700,7 @@ function leaguesView(first) {
 /* ---- Reglas ---- */
 function rulesView() {
   return `<div class="box"><h3>Cómo se juega</h3><p>Todos empezáis con ${eur(GAME.START_MONEY)} € y una plantilla aleatoria de ${Object.values(GAME.START_SQUAD).reduce((a, b) => a + b)} jugadores que vale unos ${eur(GAME.START_VALUE)} €. Entran los jugadores de los 16 equipos de la Tercera FFCV Grupo 2 y, dentro de cada liga, cada uno solo puede tener un dueño.</p>
-    <p>La jornada empieza el <b>viernes a las 21:00</b>: a esa hora se guarda la alineación de cada equipo (si no la has cambiado, cuenta la que tengas). Si a esa hora te falta alguna posición o tienes <b>saldo negativo</b>, no puntúas esa jornada. El capitán puntúa doble. Cada punto te da ${eur(GAME.PER_POINT)} €. Recompensa diaria: ${eur(GAME.DAILY)} €. Máximo ${GAME.MAX_SQUAD} jugadores.</p></div>
+    <p>La jornada empieza el <b>viernes a las 21:00</b>: a esa hora se guarda la alineación de cada equipo (si no la has cambiado, cuenta la que tengas). Si a esa hora te falta alguna posición o tienes <b>saldo negativo</b>, no puntúas esa jornada. El capitán puntúa doble. Cada punto te da ${eur(GAME.PER_POINT)} €. Recompensa diaria: ${eur(GAME.DAILY)} €. Máximo ${GAME.MAX_SQUAD} jugadores.</p><p>En las pujas a jugadores de LIGA puedes gastar más de lo que tienes: hasta quedarte en negativo un 20 % del valor de tu equipo. Para pujar por jugadores de otros mánager, hacerles ofertas o pagar cláusulas solo cuenta tu saldo.</p></div>
     <div class="box"><h3>Mercado</h3><ul><li>El mercado se actualiza cada día a las <b>16:00</b>: se resuelven las pujas de los jugadores que terminan, salen ${GAME.MARKET_SIZE} jugadores libres nuevos de LIGA y LIGA hace sus ofertas. Cada jugador de LIGA está <b>24 h</b> en el mercado: sale a las 16:00 y se va a las 16:00 del día siguiente. Si pones un jugador tuyo a la venta, está <b>48 h exactas</b> desde que lo pones (si lo pones a las 18:47 del día 23, se va a las 18:47 del día 25): entonces se resuelven sus pujas y, si nadie lo compra, vuelve a tu equipo. Los valores de los jugadores cambian a las 00:00.</li>
     <li>Las pujas son a ciegas y duran hasta el cierre. Gana la más alta (si empatan, la primera). No se puede pujar por menos del valor del jugador.</li>
     <li>La suma de tus pujas no puede pasar de tu saldo.</li><li>Cláusulas: cada jugador con dueño tiene una cláusula (nunca menos que su valor). Pagándola te lo llevas al momento, salvo los ${GAME.SHIELD_DAYS} primeros días después de llegar a un equipo (blindaje) y los <b>viernes</b> (de jueves a las 24:00 a viernes a las 24:00), para que nadie te quite jugadores justo antes de la jornada. Puedes subir la de los tuyos: cada € que pagas la sube ${GAME.CLAUSE_X} €.</li><li>Si pones un jugador a la venta, LIGA te hace una oferta cada día a las 16:00 que ronda su valor (entre −7 % y +7 %). Puedes aceptarla o rechazarla. Si al terminar nadie ha pujado, sigue a la venta.</li></ul></div>
@@ -829,6 +849,7 @@ function renderSheet() {
     body = `<h3>Buscar jugador</h3><div class="srch"><input id="sq" class="inp" type="search" placeholder="Nombre, apellido o equipo" value="${esc(sh.q || "")}" autocomplete="off" autocorrect="off" spellcheck="false"></div><div id="sres">${searchResults(sh.q)}</div>`;
   } else if (sh.t === "rival") body = rivalView(sh);
   else if (sh.t === "mof") body = mofView(sh.id);
+  else if (sh.t === "present") { el.innerHTML = presentView(); return; }
   const sc = el.querySelector(".in,.page"), scroll = sc ? sc.scrollTop : 0;
   el.innerHTML = sh.t === "ficha" || sh.t === "ofr" || sh.t === "sell" || sh.t === "rival" || sh.t === "mof" ? `<div class="page">${body}</div>` : sh.ios ? `<div class="sheet ios" data-close="1">${body}</div>` : `<div class="sheet" data-close="1"><div class="in${sh.t === "search" ? " tall" : ""}">${body}<button class="gbtn" data-close="1" style="width:100%;margin-top:10px">Cerrar</button></div></div>`;
   if (sh.keep) el.querySelector(".in,.page").scrollTop = scroll;
@@ -888,6 +909,17 @@ function mofView(id) {
     <div class="sfoot"><button class="sgo" data-act="mofgo">Hacer oferta de compra</button><p class="ssal">Tu saldo: <b>${eur(S.st.team.money)}</b><i class="gcoin">€</i></p></div></div>`;
 }
 
+// Presentación equipo: al entrar en una liga se ven los jugadores que te han tocado, uno a uno (como LaLiga Fantasy)
+function presentView() {
+  const ord = "PORDEFCENDEL", sq = mySquad().filter(PL).sort((a, b) => ord.indexOf(posOf(a)) - ord.indexOf(posOf(b)) || val(b) - val(a));
+  const n = 2 + 4 * Math.ceil(Math.max(0, sq.length - 2) / 4), name = S.st.team.name || S.st.me;
+  const cards = Array.from({ length: n }, (_, i) => { const id = sq[i], p = id && PL(id);
+    return `<div class="pc ${p ? "go" : ""}" style="--d:${0.35 + i * 0.45}s"><div class="bk">FANTASY</div>${p ? `<div class="fr"><div class="ph">${shirt(p, 60)}${crest(p.t)}<span class="ck">${CHK}</span></div><div class="nm">${esc(p.n)}</div></div>` : ""}</div>`; });
+  return `<div class="pres"><h1>Presentación equipo</h1><div class="pbar"><span class="rav">${esc(name[0].toUpperCase())}</span><b>${esc(name)}</b><small>ALMAZORA C FANTASY</small></div>
+    <div class="pg"><div class="pinf"><div><small>VALOR EQUIPO</small>${eur(sq.reduce((s, id) => s + val(id), 0))}<span class="coin">€</span></div><div><small>SALDO</small>${eur(S.st.team.money)}<span class="coin">€</span></div></div>${cards.join("")}</div>
+    <div class="pgo"><button data-pgo="1">Continuar</button></div></div>`;
+}
+
 // Fijar el precio de venta (como LaLiga Fantasy)
 const fmtN = v => String(Math.max(0, Math.round(v || 0))).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 function sellView(id) {
@@ -900,11 +932,14 @@ function sellView(id) {
 }
 
 /* ---------- eventos ---------- */
+function aviso(m) { const d = document.createElement("div"); d.className = "cfm avx"; d.dataset.avx = "1"; d.innerHTML = `<div class="cfb"><h3>Aviso</h3><p>${esc(m)}</p><button data-avx="1">Cerrar</button></div>`; document.body.appendChild(d); }
 let toastT; function toastOk(m) { toast(m); const t = document.getElementById("toast"); t.classList.add("ok"); t.innerHTML = `<span>${esc(m)}</span><button data-tx="1" aria-label="Cerrar">×</button>`; }
 function toast(m) { const t = document.getElementById("toast"); t.classList.remove("ok"); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2800); }
 function saveLineup(l) { return act("lineup", { f: l.f, s: l.s, c: l.c }); }
 document.addEventListener("click", async e => {
-  const b = e.target.closest("button,[data-close],[data-rmenu],[data-rclno]"); if (!b) return; const d = b.dataset;
+  const b = e.target.closest("button,[data-close],[data-rmenu],[data-rclno],[data-avx]"); if (!b) return; const d = b.dataset;
+  if (d.pgo) { S.sheet = null; return render(); }
+  if (d.avx) { if (e.target !== b) return; b.closest(".avx").remove(); return; }
   if (d.tx) { document.getElementById("toast").hidden = true; return; }
   if (d.close) { if (e.target !== b) return; S.sheet = (S.sheet && S.sheet.prev) || null; return render(); }
   if (d.back) { S.sheet = (S.sheet && S.sheet.prev) || null; return render(); }
@@ -959,11 +994,13 @@ document.addEventListener("click", async e => {
   if (a === "joinlg" || a === "newlg") {
     const el = document.getElementById(a === "joinlg" ? "lgcode" : "lgnew"), v = (el.value || "").trim(); if (!v) return toast(a === "joinlg" ? "Escribe el código." : "Escribe un nombre.");
     try { const r = await api(a === "joinlg" ? "joinLeague" : "createLeague", a === "joinlg" ? { code: v } : { name: v }); setLg(r.code); S.view = "team"; S.sub.team = "line";
-      toast(a === "joinlg" ? "Ya estás dentro. Te hemos repartido tu plantilla." : "Liga creada. Pasa el código " + r.code + " a tus amigos."); await refresh(); }
+      if (a === "newlg") toast("Liga creada. Pasa el código " + r.code + " a tus amigos."); await refresh(); S.sheet = { t: "present" }; renderSheet(); }
     catch (e) { toast(e.message); } return; }
   if (a === "logout") { api("logout").catch(() => {}); try { localStorage.removeItem(TK); } catch (e) {} return location.reload(); }
   if (a === "dobid") { const v = +document.getElementById("bidv").value; const id = S.sheet.id, it = S.st.market.find(i => i.pid === id), mn = it ? Math.max(it.price, val(id)) : 0;
-    if (!(v >= mn)) return toast("No puedes pujar por menos de su valor: " + eur(mn) + " €."); if (await act("bid", { pid: id, amount: v }, "Puja guardada: " + eur(v) + " €")) { S.sheet = null; render(); } return; }
+    if (!(v >= mn)) return toast("No puedes pujar por menos de su valor: " + eur(mn) + " €.");
+    try { await api("bid", { pid: id, amount: v }); } catch (e) { return /endeudamiento/.test(e.message) ? aviso(e.message) : toast(e.message); }
+    toast("Puja guardada: " + eur(v) + " €"); S.sheet = null; await refresh(); return; }
   if (a === "nobid") { const id = S.sheet.id; S.sheet = null; return act("bid", { pid: id, amount: 0 }, "Puja retirada"); }
   if (a === "offerask") { S.sheet.confirm = true; return renderSheet(); }
   if (a === "offerok") { const id = S.sheet.id, it = S.st.market.find(i => i.pid === id && i.seller === S.st.me); S.sheet = null; return act("acceptOffer", { pid: id }, "Vendido a LIGA por " + eur(it ? it.offer : 0) + " €"); }

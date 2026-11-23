@@ -118,7 +118,7 @@ async function tick(k) {
         let done = false;
         for (const b of list) {
           if (b.u === it.seller) continue;
-          const t = await getJ(k("team:") + b.u); if (!t || t.money < b.amount || t.squad.length >= G.MAX_SQUAD) continue;
+          const t = await getJ(k("team:") + b.u); if (!t || canSpend(t, pr, it.seller === "LIGA") < b.amount || t.squad.length >= G.MAX_SQUAD) continue;
           if (it.seller !== "LIGA") { const s = await getJ(k("team:") + it.seller);
             if (!s || !s.squad.includes(it.pid)) break;
             s.squad = s.squad.filter(x => x !== it.pid); s.money += b.amount; dropFromLineups(s, it.pid); lose(s, it.pid); await setJ(k("team:") + it.seller, s); }
@@ -146,6 +146,8 @@ async function tick(k) {
 // Oferta diaria de LIGA por un jugador puesto a la venta: ronda su valor (entre −7 % y +7 %)
 const ligaOffer = v => Math.max(300000, Math.round(v * (0.93 + Math.random() * 0.14) / 10000) * 10000);
 // Cláusula: nunca por debajo del valor. "since" = cuándo llegó al equipo (blindaje de SHIELD_DAYS días)
+// Lo que se puede gastar: el saldo; en fichajes de LIGA, además, deuda hasta el 20 % del valor del equipo
+const canSpend = (t, pr, liga) => t.money + (liga ? Math.floor(G.DEBT * (t.squad || []).reduce((s, id) => s + (pr.v[id] || 0), 0)) : 0);
 const clauseOf = (t, pid, pr) => Math.max((t.cl && t.cl[pid]) || 0, pr.v[pid] || 0);
 function gain(t, pid, amount) { t.cl = t.cl || {}; t.since = t.since || {}; t.cl[pid] = Math.max(amount, 0); t.since[pid] = Date.now(); }
 function lose(t, pid) { if (t.cl) delete t.cl[pid]; if (t.since) delete t.since[pid]; }
@@ -183,7 +185,7 @@ async function newTeam(k, name) {
   }
   for (const id of best.squad) await redis("HSET", k("owner"), id, name);
   const t = { name: "", money: G.START_MONEY, squad: best.squad, lineups: {}, daily: "", joined: Date.now(), v3: 1 };
-  best.squad.forEach(id => gain(t, id, pr.v[id] || 0)); return t;
+  best.squad.forEach(id => gain(t, id, Math.round((pr.v[id] || 0) * G.CLAUSE_START))); return t;
 }
 
 /* ---------- publicar una jornada: puntos y dinero en todas las ligas (Jn = null la quita) ---------- */
@@ -287,6 +289,34 @@ module.exports = async (req, res) => {
     if (!me) return send(401, { error: "Sesión caducada. Vuelve a entrar." });
     const admin = me.admin || norm(process.env.ADMIN_USER) === me.name;
     const leagues = await allLeagues();
+    if (await redis("SET", "mig:clref", "1", "NX")) {   // una vez: se devuelve lo pagado por subir cláusulas y se deshace la subida
+      const pr = await getPrices(), today = G.day(Date.now());
+      const valAt = (id, at) => { const h = pr.h[id] || [], ago = Math.round((Date.parse(today) - Date.parse(G.day(at))) / 864e5); return h[Math.max(0, h.length - 1 - ago)] || pr.v[id] || 0; };
+      for (const code of Object.keys(leagues)) { const kk = keysOf(code), users = (await redis("SMEMBERS", kk("users"))) || [], teams = {};
+        for (const u of users) { const t = await getJ(kk("team:") + u); if (t) teams[u] = t; }
+        const byName = n => Object.keys(teams).find(u => (teams[u].name || u) === n) || (teams[n] ? n : null);
+        const logs = ((await redis("LRANGE", kk("log"), 0, 299)) || []).map(x => { try { return typeof x === "string" ? JSON.parse(x) : x; } catch (e) { return null; } }).filter(Boolean).reverse();
+        const last = {}, base = {}, ch = new Set(), num = x => +String(x).replace(/\./g, "");
+        const pidOf = (t, n) => (t && (t.squad || []).find(i => PL[i] && PL[i].n === n)) || Object.keys(PL).find(i => PL[i].n === n);
+        for (const L of logs) { const tx = L.text || "";
+          const g = /^(.*) ha comprado a (.*) a .* por ([\d.]+)€/.exec(tx) || /^¡Clausulazo! (.*) ha pagado la cláusula de (.*) a .*: ([\d.]+)€$/.exec(tx) || /^(.*) ha fichado a (.*) de .* por ([\d.]+)€ \(oferta aceptada\)$/.exec(tx);
+          if (g) { const u = byName(g[1]), id = u && pidOf(teams[u], g[2]); if (id) { base[u + ":" + id] = num(g[3]); delete last[u + ":" + id]; } continue; }
+          const m = /^(.*) ha subido la cláusula de (.*) a ([\d.]+)€$/.exec(tx); if (!m) continue;
+          const u = byName(m[1]); if (!u) continue; const t = teams[u], to = +m[3].replace(/\./g, "");
+          const id = (t.squad || []).find(i => PL[i] && PL[i].n === m[2]) || Object.keys(PL).find(i => PL[i].n === m[2]); if (!id) continue;
+          const key = u + ":" + id, since = (t.since || {})[id] || t.joined || 0, before = last[key] || Math.max(base[key] || valAt(id, since), valAt(id, L.at));
+          const paid = Math.max(0, Math.round((to - before) / G.CLAUSE_X / 1000) * 1000); last[key] = to;
+          t.money += paid; if (t.cl && t.cl[id]) t.cl[id] = Math.max(0, t.cl[id] - paid * G.CLAUSE_X); ch.add(u);
+          await log(kk, "market", `Se han devuelto ${paid.toLocaleString("es-ES")}€ a ${t.name || u} por subir la cláusula de ${PL[id].n}`); }
+        for (const u of ch) await setJ(kk("team:") + u, teams[u]); }
+    }
+    if (await redis("SET", "mig:cl53", "1", "NX")) {   // una vez: cláusula de los jugadores del reparto inicial = valor × 5/3
+      const pr = await getPrices();
+      for (const code of Object.keys(leagues)) { const kk = keysOf(code);
+        for (const u of (await redis("SMEMBERS", kk("users"))) || []) { const t = await getJ(kk("team:") + u); if (!t) continue; let ch = 0;
+          for (const id of t.squad || []) { const sn = (t.since || {})[id]; if (sn && t.joined && Math.abs(sn - t.joined) < 60e3) { t.cl = t.cl || {}; t.cl[id] = Math.round((pr.v[id] || 0) * G.CLAUSE_START); ch = 1; } }
+          if (ch) await setJ(kk("team:") + u, t); } }
+    }
     let mineL = await myLeagues(me.name);
 
     // ---- crear liga / unirse con código ----
@@ -421,7 +451,8 @@ module.exports = async (req, res) => {
       const minBid = Math.max(it.price, (await getPrices()).v[b.pid] || 0);   // nunca por debajo del valor del jugador
       if (!(amount >= minBid)) return send(400, { error: "No puedes pujar por menos de su valor: " + minBid.toLocaleString("es-ES") + " €." });
       let others = 0; for (const x of market.items) { if (x.pid === b.pid) continue; const v = await redis("HGET", k("bids:") + x.pid, me.name); if (v) others += JSON.parse(v).amount; }
-      if (amount + others > mine.money) return send(400, { error: "Con tus otras pujas no te llega el saldo (" + mine.money.toLocaleString("es-ES") + " €)." });
+      const lim = canSpend(mine, await getPrices(), it.seller === "LIGA");
+      if (amount + others > lim) return send(400, { error: it.seller === "LIGA" ? "La cantidad pujada sobrepasa tu endeudamiento permitido (20% valor de tu equipo)." : "Con tus otras pujas no te llega el saldo (" + mine.money.toLocaleString("es-ES") + " €)." });
       if (mine.squad.length >= G.MAX_SQUAD) return send(400, { error: "Tienes el máximo de " + G.MAX_SQUAD + " jugadores." });
       await redis("HSET", k("bids:") + b.pid, me.name, JSON.stringify({ amount, at: Date.now() })); return send(200, { ok: true });
     }
