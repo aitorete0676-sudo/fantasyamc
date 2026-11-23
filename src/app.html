@@ -473,6 +473,13 @@ async function pushOn(ask) {
     await api("pushSub", { sub: sub.toJSON() }); S.pushOn = true; if (ask) { toastOk("Notificaciones activadas"); render(); }
   } catch (e) { if (ask) toast("No se han podido activar: " + e.message); }
 }
+// Al entrar, una sola vez: ¿quieres activar las notificaciones?
+function pushAsk() {
+  try { if (!("serviceWorker" in navigator && "PushManager" in window && "Notification" in window) || Notification.permission !== "default" || S.store !== "ok" || !S.st.lg || S.sheet || localStorage.getItem("pushAsk")) return;
+    localStorage.setItem("pushAsk", "1"); } catch (e) { return; }
+  const d = document.createElement("div"); d.className = "cfm avx"; d.dataset.avx = "1";
+  d.innerHTML = `<div class="cfb"><h3>Notificaciones</h3><p>¿Quieres activar las notificaciones para enterarte cuando te hagan una oferta?</p><button data-act="pushask">Activar</button><button data-avx="1" style="color:#6b6f7b;font-weight:500">Ahora no</button></div>`; document.body.appendChild(d);
+}
 async function boot() {
   fetch("/fotos.json").then(r => r.ok ? r.json() : []).then(a => { a.forEach(id => FOTOS.add(String(id))); if (S.store === "ok") render(); }).catch(() => {});
   const st0 = tok() ? api("state").catch(e => e) : null;   // a la vez que liga.json: carga más rápido
@@ -480,7 +487,7 @@ async function boot() {
   catch (e) { document.getElementById("main").innerHTML = '<div class="empty">No se han podido cargar los datos de la liga.</div>'; return; }
   if (!tok()) { S.store = "auth"; return render(); }
   await refresh(st0);
-  pushOn(false);
+  pushOn(false); pushAsk();
   setInterval(() => { if (!document.hidden && !S.sheet && !document.querySelector("input:focus")) refresh(); }, 15000);
   setInterval(tickTimers, 1000);
 }
@@ -1070,6 +1077,7 @@ document.addEventListener("click", async e => {
       if (a === "newlg") toast("Liga creada. Pasa el código " + r.code + " a tus amigos."); await refresh(); S.sheet = { t: "present" }; renderSheet(); }
     catch (e) { toast(e.message); } return; }
   if (a === "pushon") return pushOn(true);
+  if (a === "pushask") { const x = document.querySelector(".avx"); if (x) x.remove(); return pushOn(true); }
   if (a === "logout") { api("logout").catch(() => {}); try { localStorage.removeItem(TK); } catch (e) {} return location.reload(); }
   if (a === "bidclr") { const i = document.getElementById("bidv"); i.value = ""; i.focus(); return; }
   if (a === "dobid") { const v = +String(document.getElementById("bidv").value).replace(/\D/g, ""); const id = S.sheet.id, it = S.st.market.find(i => i.pid === id), mn = it ? Math.max(it.price, val(id)) : 0;
