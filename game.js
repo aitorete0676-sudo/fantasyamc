@@ -4,7 +4,8 @@
   else root.GAME = factory();
 })(typeof self !== "undefined" ? self : this, function () {
   const R = {
-    FIRST_J: 9,               // el fantasy puntúa desde la jornada 9
+    FIRST_J: 9,               // jornadas que se importan (estadísticas y precios) desde la 9
+    POINTS_FROM: 10,          // los equipos ganan puntos y dinero desde la jornada 10
     START_MONEY: 100000000,    // dinero al entrar (100 M)
     START_VALUE: 100000000,    // valor aproximado de la plantilla inicial (100 M)
     START_MAX: 30000000,       // en la plantilla inicial no toca nadie que valga más de 30 M

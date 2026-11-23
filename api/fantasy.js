@@ -190,7 +190,8 @@ async function newTeam(k, name) {
 async function payJornada(n, Jn, leagues) {
       for (const code of Object.keys(leagues)) {
         const kk = keysOf(code), users = (await redis("SMEMBERS", kk("users"))) || [], prevPts = (await hgetall(kk("points")))[n] || {};
-        if (!Jn) {
+        if (!Jn || n < G.POINTS_FROM) {   // sin jornada o anterior a POINTS_FROM: se quita lo pagado
+          if (!(await redis("HEXISTS", kk("points"), String(n)))) continue;
           for (const u of users) { const t = await getJ(kk("team:") + u); if (!t) continue; t.money -= Math.max(0, prevPts[u] || 0) * G.PER_POINT; await setJ(kk("team:") + u, t); }
           await redis("HDEL", kk("points"), String(n)); continue;
         }
@@ -224,6 +225,7 @@ async function autoJornada(leagues, force, cron) {
   else { if (!cron && !finde(Date.now())) return { msg: "Fuera del horario de búsqueda." };
     if (!(await redis("SET", "auto:chk", "1", "NX", "EX", 7200))) return { msg: "Ya se ha mirado hace poco." }; }
   const imp = await hgetall("jornadas"), out = [];
+  for (const k of Object.keys(imp)) if (+k < G.POINTS_FROM) await payJornada(+k, null, leagues);   // J9 no da puntos a los equipos
   let n = G.FIRST_J; while (imp[n]) n++;
   const todo = Object.values(imp).filter(J => J.n < n && (J.faltan > 0 || (J.auto && (J.fx || "[]") !== fxOf(J.n)))).map(J => J.n).concat([n]);
   const idx = {}; LIGA.teams.forEach((t, i) => idx[t.name.trim().toLowerCase()] = i);

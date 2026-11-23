@@ -389,7 +389,7 @@ function shirt(p, size) {
     <text x="50" y="72" text-anchor="middle" font-size="30" fill="${t === MY_T ? "#ee5a4b" : "#fff"}" stroke="${t === MY_T ? "#111" : "none"}" stroke-width="1">${p ? esc(p.d || "") : ""}</text></svg>`;
 }
 function allJ() { const o = {}; Object.values(S.liga.jornadas).forEach(J => o[J.n] = J); Object.values((S.st && S.st.jornadas) || {}).forEach(J => o[J.n] = J); return Object.values(o).sort((a, b) => a.n - b.n); }
-const fantasyJ = () => allJ().filter(J => J.n >= GAME.FIRST_J && J.publicada);
+const fantasyJ = () => allJ().filter(J => J.n >= GAME.POINTS_FROM && J.publicada);
 const ptsOf = (id, J) => GAME.points(posOf(id), J, id);
 function seasonOf(id) { let pf = 0, apps = 0; allJ().forEach(J => { pf += ptsOf(id, J); if (GAME.mins(J, id) > 0) apps++; }); return { pf, apps, media: apps ? pf / apps : 0 }; }
 const val = id => (S.st.prices.v[id] || 0);
@@ -552,7 +552,7 @@ function squadView() {
 
 /* ---- Puntos ---- */
 function ptsView() {
-  const pl = fantasyJ().slice().reverse(); if (!pl.length) return `<div class="empty">El fantasy empieza a puntuar en la jornada ${GAME.FIRST_J}. Aquí verás tus puntos de cada jornada, jugador a jugador.</div>`;
+  const pl = fantasyJ().slice().reverse(); if (!pl.length) return `<div class="empty">El fantasy empieza a puntuar en la jornada ${GAME.POINTS_FROM}. Aquí verás tus puntos de cada jornada, jugador a jugador.</div>`;
   return pl.map(J => { const r = GAME.teamPoints(S.st.team, J, posOf);
     const rows = r.l.s.filter(Boolean).map(id => { const p = PL(id); if (!p) return ""; const v = ptsOf(id, J) * (id === r.l.c ? 2 : 1);
       return `<tr><td><button data-ficha="${id}"><span class="pos ${posOf(id)}">${posOf(id)}</span> ${esc(p.n)}${id === r.l.c ? " (C ×2)" : ""}</button></td><td>${v}</td></tr>`; }).join("");
