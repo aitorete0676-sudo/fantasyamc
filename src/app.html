@@ -423,7 +423,7 @@ function authView() {
   return `<div class="box" style="max-width:420px;margin:24px auto;text-align:center"><div class="logo" style="font-size:28px;margin-bottom:8px">ALMAZORA C <span>fantasy</span></div>
     <p>El fantasy de la Tercera FFCV Grupo 2. Empiezas con ${eur(GAME.START_MONEY)} € y una plantilla de unos ${eur(GAME.START_VALUE)} €.</p>
     <div class="subt" style="margin:10px 0"><button data-auth-tab="in" class="${S.authTab !== "up" ? "on" : ""}">Entrar</button><button data-auth-tab="up" class="${S.authTab === "up" ? "on" : ""}">Crear cuenta</button></div>
-    <form id="auform" style="display:grid;gap:8px;text-align:left"><div class="fld"><label for="au-user">Usuario</label><input id="au-user" autocomplete="username" autocapitalize="off" placeholder="p. ej. moliner9"></div>
+    <form id="auform" style="display:grid;gap:8px;text-align:left"><div class="fld"><label for="au-user">Usuario</label><input id="au-user" autocomplete="username" autocapitalize="off"></div>
       <div class="fld"><label for="au-pass">Contraseña</label><input id="au-pass" type="password" autocomplete="${S.authTab === "up" ? "new-password" : "current-password"}" placeholder="Mínimo 6 caracteres"></div>
       <button class="abtn" type="submit">${S.authTab === "up" ? "Crear cuenta" : "Entrar"}</button></form>
     <p class="note">${esc(S.authMsg || "")}</p></div>`;
