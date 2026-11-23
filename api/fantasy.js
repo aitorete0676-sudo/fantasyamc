@@ -359,7 +359,7 @@ module.exports = async (req, res) => {
         for (const u of Object.keys(teams)) { const t = teams[u];
           const ini = new Set((t.squad || []).filter(id => Math.abs(((t.since || {})[id] || 0) - (t.joined || 0)) < 60e3)); (sold[u] || []).forEach(id => ini.add(id));
           let iv = [...ini].reduce((a, id) => a + V(id), 0); const add = [];
-          while (iv < TARGET - 3e6 && (t.squad || []).length < G.MAX_SQUAD) { const gap = TARGET - iv;
+          while (false && iv < TARGET - 3e6 && (t.squad || []).length < G.MAX_SQUAD) {   // Aitor: "no le des jugadores a nadie todavía" → solo se informa const gap = TARGET - iv;
             const c = LIGA.players.filter(p => !taken.has(p.id) && V(p.id) <= 30e6 && V(p.id) > 0).sort((a, b) => Math.abs(V(a.id) - gap) - Math.abs(V(b.id) - gap))[0]; if (!c) break;
             add.push(c.id); taken.add(c.id); t.squad.push(c.id); t.cl = t.cl || {}; t.since = t.since || {}; t.cl[c.id] = Math.round(V(c.id) * G.CLAUSE_START); t.since[c.id] = t.joined || Date.now(); iv += V(c.id);
             await redis("HSET", kk("owner"), c.id, u); }
