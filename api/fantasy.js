@@ -383,7 +383,7 @@ module.exports = async (req, res) => {
           else if ((m = /^¡Clausulazo! .* ha pagado la cláusula de (.*) a (.*): [\d.]+€$/.exec(tx))) addSold(byN(m[2]), m[1]); }
         const ch = new Set();
         // 1) jugadores regalados → fuera
-        for (const L of logs) { const m = /^(.*): su plantilla inicial valía \d+ M; recibe (.*) y queda en \d+ M\.$/.exec(L.text || ""); if (!m) continue;
+        for (const L of (false ? logs : [])) { const m = /^(.*): su plantilla inicial valía \d+ M; recibe (.*) y queda en \d+ M\.$/.exec(L.text || ""); if (!m) continue;
           const u = byN(m[1]); if (!u) continue; const t = teams[u], gone = [];
           for (const n of m[2].split(/ \(\d+ M\)(?:, )?/).map(x => x.trim()).filter(Boolean)) {
             const id = (t.squad || []).find(i => PL[i] && PL[i].n === n); if (!id) continue;
@@ -400,6 +400,19 @@ module.exports = async (req, res) => {
           t.money = (t.money || 0) + back - (key ? FIX[key] : 0); ch.add(u);
           if (key) await log(kk, "info", `${nameOf(u)}: su plantilla inicial valía más que la del resto; se le restan ${FIX[key] / 1e6} M del dinero para fichar.`); }
         for (const u of ch) await setJ(kk("team:") + u, teams[u]); }
+    }
+    if (await redis("SET", "mig:regift1", "1", "NX")) {   // Aitor (2026-11-23 17:32): "no le quites los jugadores": si ya se quitaron, se devuelven
+      for (const code of Object.keys(leagues)) { const kk = keysOf(code);
+        if (!(await redis("SISMEMBER", kk("users"), "aiitorjiimeneez"))) continue;
+        const logs = ((await redis("LRANGE", kk("log"), 0, 499)) || []).map(x => { try { return typeof x === "string" ? JSON.parse(x) : x; } catch (e) { return null; } }).filter(Boolean);
+        const mk = await getJ(kk("market")), inMk = new Set((mk ? mk.items : []).map(i => i.pid));
+        for (const L of logs) { const m = /^(.*): se le quitan los jugadores que se le dieron al equilibrar \((.*)\)\.$/.exec(L.text || ""); if (!m) continue;
+          const users = (await redis("SMEMBERS", kk("users"))) || []; let u = null, t = null;
+          for (const x of users) { const tt = await getJ(kk("team:") + x); if (tt && ((tt.name || x) === m[1] || x === m[1])) { u = x; t = tt; break; } } if (!t) continue;
+          const back = [];
+          for (const n of m[2].split(", ")) { const id = Object.keys(PL).find(i => PL[i].n === n && !(t.squad || []).includes(i)); if (!id || inMk.has(id) || (await redis("HGET", kk("owner"), id))) continue;
+            t.squad.push(id); t.cl = t.cl || {}; t.since = t.since || {}; t.cl[id] = Math.round(((await getPrices()).v[id] || 0) * G.CLAUSE_START); t.since[id] = t.joined || Date.now(); await redis("HSET", kk("owner"), id, u); back.push(n); }
+          if (back.length) { await setJ(kk("team:") + u, t); await log(kk, "info", `${t.name || u}: se le devuelven ${back.join(", ")}.`); } } }
     }
     if (await redis("SET", "mig:reset1", "1", "NX")) {   // Aitor (2026-11-23): Liga Almazora C desde cero: 11 jugadores (1-4-4-2) de ~100 M, nadie de más de 20 M, 150 M para fichar
       for (const k of ["mig:clref", "mig:own1", "mig:fill1", "mig:redeal1", "mig:redeal2", "mig:cl53"]) await redis("SET", k, "1");   // los arreglos anteriores ya no hacen falta
