@@ -609,7 +609,7 @@ function offRow(o, inc) {
     <div class="ofb">${inc ? `<button class="gbtn" data-mrej="${o.pid}|${esc(o.from)}">Rechazar</button><button class="abtn sm" data-macc="${o.pid}|${esc(o.from)}" ${locked() ? "disabled" : ""}>Aceptar</button>` : `<button class="gbtn" data-mcancel="${o.pid}">Retirar</button>`}</div></div>`;
 }
 function marketView() {
-  const pos = S.mpos, items = S.st.market.filter(i => PL(i.pid) && (pos === "ALL" || (pos === "FAV" ? isFav(i.pid) : posOf(i.pid) === pos))).sort((a, b) => (a.seller === "LIGA") - (b.seller === "LIGA") || val(b.pid) - val(a.pid));
+  const pos = S.mpos, items = S.st.market.filter(i => PL(i.pid) && (pos === "ALL" || (pos === "FAV" ? isFav(i.pid) : posOf(i.pid) === pos))).sort((a, b) => (b.seller === "LIGA") - (a.seller === "LIGA") || val(b.pid) - val(a.pid));   // primero LIGA, abajo los de los mánager
   return rewardBox() + (offIn().length ? `<button class="ofban" data-sub="ops">Tienes ${offIn().length} oferta${offIn().length > 1 ? "s" : ""} de otros mánagers ›</button>` : "") + (items.length ? items.map(mcard).join("") : '<div class="empty">No hay jugadores en el mercado.</div>');
 }
 // Cláusula de un jugador con dueño: { owner, c, until (fin del blindaje) }
