@@ -4,6 +4,22 @@ const crypto = require("crypto");
 const G = require("../game.js");
 const LIGA = require("../liga.json");
 const FF = require("../ffcv.js");
+const webpush = require("web-push");
+
+/* ---------- notificaciones push (ofertas recibidas) ---------- */
+async function vapid() {   // las claves se crean solas la primera vez y se guardan en la base de datos
+  let v = await getJ("vapid"); if (!v) { v = webpush.generateVAPIDKeys(); await redis("SET", "vapid", JSON.stringify(v), "NX"); v = await getJ("vapid"); }
+  return v;
+}
+async function notify(user, title, body, url) {
+  try {
+    const subs = (await redis("HGETALL", "push:" + user)) || []; if (!subs.length) return;
+    const v = await vapid(); webpush.setVapidDetails("https://fantasyamc.vercel.app", v.publicKey, v.privateKey);
+    await Promise.all(subs.filter((_, i) => i % 2 === 1).map(async raw => { const sub = JSON.parse(raw);
+      try { await webpush.sendNotification(sub, JSON.stringify({ title, body, url: url || "/" }), { TTL: 86400 }); }
+      catch (e) { if (e.statusCode === 404 || e.statusCode === 410) await redis("HDEL", "push:" + user, sub.endpoint); } }));
+  } catch (e) {}
+}
 
 const envKey = suf => process.env["KV" + suf] ? "KV" + suf : Object.keys(process.env).find(k => k.endsWith(suf) && !k.includes("READ_ONLY"));
 const URL_ = process.env[envKey("_REST_API_URL")] || process.env.UPSTASH_REDIS_REST_URL;
@@ -459,6 +475,9 @@ module.exports = async (req, res) => {
     }
     await redis("SET", "mig:ver", MIGV); }
     let mineL = me.leagues || await myLeagues(me.name);
+    if (a === "pushKey") return send(200, { key: (await vapid()).publicKey });
+    if (a === "pushSub") { const sub = b.sub; if (!sub || !sub.endpoint || !sub.keys) return send(400, { error: "Suscripción no válida." });
+      await redis("HSET", "push:" + me.name, sub.endpoint, JSON.stringify({ endpoint: sub.endpoint, keys: sub.keys })); return send(200, { ok: true }); }
 
     // ---- crear liga / unirse con código ----
     if (a === "createLeague") {
@@ -553,6 +572,7 @@ module.exports = async (req, res) => {
         if (x > mine.money) return send(400, { error: "No tienes tanto saldo." });
         await redis("HSET", k("offers"), pid + "|" + me.name, JSON.stringify({ pid, from: me.name, to: ow, amount: x, at: Date.now() }));
         await log(k, "market", `${mine.name || me.name} ha hecho una oferta por ${PL[pid].n} a ${tow.name || ow}`);
+        await notify(ow, "Nueva oferta", `${mine.name || me.name} te ofrece ${x.toLocaleString("es-ES")} € por ${PL[pid].n}`, "/");
         return send(200, { ok: true });
       }
       if (a === "mgrCancel") { await redis("HDEL", k("offers"), pid + "|" + me.name); return send(200, { ok: true }); }

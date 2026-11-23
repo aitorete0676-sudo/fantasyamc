@@ -468,6 +468,28 @@ async function act(action, body, okMsg) {
   try { await api(action, body); if (okMsg) toast(okMsg); await refresh(); return true; }
   catch (e) { toast(e.message); return false; }
 }
+// Notificaciones push: avisan cuando otro mánager te hace una oferta
+function notifBox() {
+  const ok = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent), standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+  let body;
+  if (!ok) body = ios && !standalone ? `<p>En iPhone, primero añade la app a la pantalla de inicio (Compartir › Añadir a pantalla de inicio) y ábrela desde ahí.</p>` : `<p>Este navegador no admite notificaciones.</p>`;
+  else if (Notification.permission === "granted" && S.pushOn) body = `<p>Activadas: te avisaremos cuando te hagan una oferta.</p>`;
+  else if (Notification.permission === "denied") body = `<p>Las tienes bloqueadas. Actívalas en los ajustes del móvil para esta app.</p>`;
+  else body = `<p>Te avisamos cuando otro mánager te haga una oferta.</p><button class="abtn" data-act="pushon">Activar notificaciones</button>`;
+  return `<div class="box"><h3>Notificaciones</h3>${body}</div>`;
+}
+async function pushOn(ask) {
+  try {
+    if (!("serviceWorker" in navigator && "PushManager" in window && "Notification" in window)) return;
+    if (ask) { if ((await Notification.requestPermission()) !== "granted") { toast("No has dado permiso para las notificaciones."); return render(); } }
+    else if (Notification.permission !== "granted") return;
+    const reg = await navigator.serviceWorker.ready; let sub = await reg.pushManager.getSubscription();
+    if (!sub) { const { key } = await api("pushKey"); const raw = atob(key.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((key.length + 3) % 4));
+      sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: Uint8Array.from(raw, ch => ch.charCodeAt(0)) }); }
+    await api("pushSub", { sub: sub.toJSON() }); S.pushOn = true; if (ask) { toastOk("Notificaciones activadas"); render(); }
+  } catch (e) { if (ask) toast("No se han podido activar: " + e.message); }
+}
 async function boot() {
   fetch("/fotos.json").then(r => r.ok ? r.json() : []).then(a => { a.forEach(id => FOTOS.add(String(id))); if (S.store === "ok") render(); }).catch(() => {});
   const st0 = tok() ? api("state").catch(e => e) : null;   // a la vez que liga.json: carga más rápido
@@ -475,6 +497,7 @@ async function boot() {
   catch (e) { document.getElementById("main").innerHTML = '<div class="empty">No se han podido cargar los datos de la liga.</div>'; return; }
   if (!tok()) { S.store = "auth"; return render(); }
   await refresh(st0);
+  pushOn(false);
   setInterval(() => { if (!document.hidden && !S.sheet && !document.querySelector("input:focus")) refresh(); }, 15000);
   setInterval(tickTimers, 1000);
 }
@@ -764,7 +787,7 @@ function rulesView() {
     <li>Los precios son los mismos en todas las ligas.</li>
     <li>Demanda: +1 % por cada puja que reciba en cualquier liga (tope +5 %). Si alguien lo pone a la venta y nadie puja, −1 %.</li>
     <li>Rendimiento: el día después de publicar la jornada, (puntos − 3) × 1 %, entre −5 % y +8 %. Si no juega, −1 %.</li></ul></div>
-    <div class="box"><p>Has entrado como <b>${esc(S.st.me)}</b>${S.st.admin ? " (administrador)" : ""}.</p><button class="gbtn" data-act="logout">Cerrar sesión</button></div>`;
+    ${notifBox()}<div class="box"><p>Has entrado como <b>${esc(S.st.me)}</b>${S.st.admin ? " (administrador)" : ""}.</p><button class="gbtn" data-act="logout">Cerrar sesión</button></div>`;
 }
 
 /* ---- Admin: importar actas de una jornada ---- */
@@ -1063,6 +1086,7 @@ document.addEventListener("click", async e => {
     try { const r = await api(a === "joinlg" ? "joinLeague" : "createLeague", a === "joinlg" ? { code: v } : { name: v }); setLg(r.code); S.view = "team"; S.sub.team = "line";
       if (a === "newlg") toast("Liga creada. Pasa el código " + r.code + " a tus amigos."); await refresh(); S.sheet = { t: "present" }; renderSheet(); }
     catch (e) { toast(e.message); } return; }
+  if (a === "pushon") return pushOn(true);
   if (a === "logout") { api("logout").catch(() => {}); try { localStorage.removeItem(TK); } catch (e) {} return location.reload(); }
   if (a === "bidclr") { const i = document.getElementById("bidv"); i.value = ""; i.focus(); return; }
   if (a === "dobid") { const v = +String(document.getElementById("bidv").value).replace(/\D/g, ""); const id = S.sheet.id, it = S.st.market.find(i => i.pid === id), mn = it ? Math.max(it.price, val(id)) : 0;
