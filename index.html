@@ -182,6 +182,7 @@ select.form{background:var(--card);color:var(--fg);border:0;padding:10px 12px;fo
 .rj{flex:none;width:44px;height:44px;border-radius:50%;background:#2a2c35;color:#9aa0ad;font-size:13px;font-weight:700;display:grid;place-items:center;line-height:1.05}
 .rj.on{background:#18a33a;color:#fff;width:48px;height:48px}.rj small{display:block;font-size:11px;font-weight:600}
 .iosm button.dis{color:rgba(20,21,27,.35)}
+.lnk{color:#e5534b;font-size:14px;text-decoration:underline}
 .spill .clr{width:30px;height:30px;border-radius:50%;background:#14151b;display:grid;place-items:center;flex:none;color:#fff;font-size:18px;line-height:1}
 .pres{position:fixed;inset:0;z-index:70;background:#0e0f15 repeating-linear-gradient(115deg,transparent 0 120px,rgba(255,255,255,.025) 120px 220px);display:flex;flex-direction:column;overflow-y:auto}
 .pres h1{font-size:17px;font-weight:700;text-align:center;margin:0;padding:calc(16px + env(safe-area-inset-top,0px)) 0 14px}
@@ -853,17 +854,16 @@ function renderSheet() {
   else if (sh.t === "ofr") body = ofrView(sh);
   else if (sh.t === "sell") body = sellView(sh.id);
   else if (sh.t === "pick") body = pickView(sh);
-  else if (sh.t === "bid") {
-    const it = S.st.market.find(i => i.pid === sh.id), my = S.st.myBids[sh.id], mn = it ? Math.max(it.price, val(sh.id)) : 0;
-    body = it ? `<h3>Pujar por ${esc(PL(sh.id).n)}</h3><p class="note">Valor ${eur(val(sh.id))} €. Puja mínima ${eur(mn)} €: no se puede pujar por menos de su valor. Se resuelve el ${fmtWhen(it.ends)}. Saldo: ${eur(S.st.team.money)} €.</p>
-      <div class="fld"><label for="bidv">Tu puja (€)</label><input id="bidv" class="inp" type="number" inputmode="numeric" min="${mn}" step="10000" value="${Math.max(my || 0, mn)}"></div>
-      <div class="row2"><button class="abtn" data-act="dobid">${my ? "Cambiar puja" : "Pujar"}</button>${my ? `<button class="gbtn" data-act="nobid">Retirar puja</button>` : ""}<button class="gbtn" data-ficha="${sh.id}">Ver ficha</button></div>` : "<p>Ya no está en el mercado.</p>";
-  } else if (sh.t === "acts") {
+  else if (sh.t === "bid") body = bidView(sh.id);
+  else if (sh.t === "acts") {
     const id = sh.id, p = PL(id), mine = S.st.team.squad.includes(id), listed = S.st.market.some(i => i.pid === id && i.seller === S.st.me);
     const own = ownerOf(id), ci = clauseInfo(id), inMk = S.st.market.find(i => i.pid === id && i.seller !== S.st.me);
     const status = own ? (own === S.st.me ? "En tu equipo" : "Es de " + teamName(own)) : inMk ? "En el mercado" : "Libre (LIGA)";
     if (mine && !sh.raise && !sh.confirm) { const no = offersFor(id).length;
       sh.ios = 1; body = `<div class="iosm">${listed ? `<button data-unlist="${id}">Quitar del mercado</button>` : `<button data-act="sellpage">Añadir al mercado</button>`}${no ? `<button data-ofr="${id}">Ofertas (${no})</button>` : ""}${ci ? `<button data-act="raiseask">Subir cláusula</button>` : ""}<button data-close="1">Cerrar</button></div>`; }
+    else if (!mine && !sh.old && !sh.clause && !sh.mof) { sh.ios = 1; const canCl = ci && now() >= ci.until && !GAME.clauseBlocked(now());
+      body = `<div class="iosm">${inMk ? `<button data-bid="${id}">Pujar</button>` : ""}${own && own !== S.st.me ? `<button data-act="mofpage" data-pid="${id}">Oferta de compra</button><button class="dis" disabled>Oferta de cesión</button><button data-act="rclause" data-pid="${id}" class="${canCl ? "" : "dis"}">Pagar cláusula</button>` : ""}${S.st.admin ? `<button data-act="oldacts">Cambiar posición</button>` : ""}<button data-close="1">Cerrar</button></div>`;
+      if (sh.cl && ci) body += `<div class="cfm" data-rclno="1"><div class="cfb"><h3>Pagar cláusula</h3><p>Vas a pagar <b>${eur(ci.c)} €</b> a <b>${esc(teamName(ci.owner))}</b> por <b>${esc(p.n)}</b>. Tu saldo: ${eur(S.st.team.money)} €</p><div class="cfr"><button data-rclno="1">Cancelar</button><button data-rclok="${id}">Pagar</button></div></div></div>`; }
     else { sh.ios = 0;
     body = `<h3>${esc(p.n)}</h3><p class="note" style="margin-top:-4px">${esc(status)} · ${esc(team(p.t).name)}</p>` + (mine ? `
       ${listed ? `<button class="opt" data-unlist="${id}"><b>Quitar del mercado</b></button>` : `<button class="opt" data-act="listask"><b>Poner en el mercado</b><span>pujan los demás y LIGA te hace una oferta cada día</span></button>`}
@@ -887,7 +887,7 @@ function renderSheet() {
   else if (sh.t === "mof") body = mofView(sh.id);
   else if (sh.t === "present") { el.innerHTML = presentView(); return; }
   const sc = el.querySelector(".in,.page"), scroll = sc ? sc.scrollTop : 0;
-  el.innerHTML = sh.t === "ficha" || sh.t === "ofr" || sh.t === "sell" || sh.t === "rival" || sh.t === "mof" || sh.t === "pick" ? `<div class="page${sh.t === "pick" ? " zin" + (sh.out ? " zout" : "") : ""}" style="${sh.t === "pick" && sh.o ? "transform-origin:" + sh.o : ""}">${body}</div>` : sh.ios ? `<div class="sheet ios" data-close="1">${body}</div>` : `<div class="sheet" data-close="1"><div class="in${sh.t === "search" ? " tall" : ""}">${body}<button class="gbtn" data-close="1" style="width:100%;margin-top:10px">Cerrar</button></div></div>`;
+  el.innerHTML = sh.t === "ficha" || sh.t === "ofr" || sh.t === "sell" || sh.t === "rival" || sh.t === "mof" || sh.t === "pick" || sh.t === "bid" ? `<div class="page${sh.t === "pick" ? " zin" + (sh.out ? " zout" : "") : ""}" style="${sh.t === "pick" && sh.o ? "transform-origin:" + sh.o : ""}">${body}</div>` : sh.ios ? (sh.prev && sh.prev.t === "ficha" ? `<div class="page">${fichaView(sh.prev.id)}</div>` : "") + `<div class="sheet ios" data-close="1" style="z-index:65">${body}</div>` : `<div class="sheet" data-close="1"><div class="in${sh.t === "search" ? " tall" : ""}">${body}<button class="gbtn" data-close="1" style="width:100%;margin-top:10px">Cerrar</button></div></div>`;
   if (sh.keep) el.querySelector(".in,.page").scrollTop = scroll;
   const js = el.querySelector(".jstrip"), on = js && js.querySelector(".jbox.on"); if (on) js.scrollLeft = on.offsetLeft - js.clientWidth / 2 + on.offsetWidth / 2;
   if (sh.t === "search" && !sh.keep) { const i = document.getElementById("sq"); i.focus(); }
@@ -965,6 +965,19 @@ function pickView(sh) {
     ${opts.length ? opts.map(id => `<div class="pkopt" data-pick="${id}">${pcard(id, "pick")}</div>`).join("") : `<div class="vacio pkno"><svg viewBox="0 0 120 120" width="120"><circle cx="52" cy="52" r="30" fill="#8b5cf6"/><circle cx="52" cy="52" r="20" fill="#cfd3dc"/><path d="M74 74l26 26" stroke="#8b5cf6" stroke-width="10" stroke-linecap="round"/><circle cx="86" cy="86" r="16" fill="#e5534b"/><path d="M80 80l12 12M92 80l-12 12" stroke="#14151b" stroke-width="4"/></svg><p>No tienes más jugadores en esta posición</p></div>`}</div>`;
 }
 
+// Puja por un jugador del mercado (como LaLiga Fantasy)
+function bidView(id) {
+  const p = PL(id), it = S.st.market.find(i => i.pid === id), my = S.st.myBids[id], v = val(id);
+  if (!it) return `<div class="sell"><div class="shd"><button data-back="1" aria-label="Volver"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><h1>Puja por ${esc(p.n)}</h1><span></span></div><p class="note" style="text-align:center">Ya no está en el mercado.</p></div>`;
+  const mn = Math.max(it.price, v);
+  return `<div class="sell"><div class="shd"><button data-back="1" aria-label="Volver"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><h1>Puja por ${esc(p.n)}</h1><span></span></div>
+    <div class="sav">${shirt(p, 100)}</div>
+    <div class="skv"><i class="ycoin">€</i><span>Valor de mercado</span><b>${eur(v)}</b><i class="lkc">${LOCK}</i><span>Precio solicitado</span><b>${eur(it.price)}</b></div>
+    <div class="spill"><span class="eu">€</span><label for="bidv"><small>IMPORTE</small><input id="bidv" type="text" inputmode="numeric" autocomplete="off" value="${fmtN(Math.max(my || 0, mn))}"></label><button class="pen" data-act="pen" aria-label="Editar importe"><svg viewBox="0 0 24 24"><path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/></svg></button><button class="clr" data-act="bidclr" aria-label="Borrar importe">×</button></div>
+    ${my ? `<p class="ssal" style="margin-top:14px">Tu puja actual: <b>${eur(my)}</b> · <button class="lnk" data-act="nobid">Retirar puja</button></p>` : ""}
+    <div class="sfoot"><button class="sgo" data-act="dobid">Hacer puja</button><p class="ssal">Tu saldo: <b>${eur(S.st.team.money)}</b><i class="gcoin">€</i></p></div></div>`;
+}
+
 // Fijar el precio de venta (como LaLiga Fantasy)
 const fmtN = v => String(Math.max(0, Math.round(v || 0))).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 function sellView(id) {
@@ -1005,7 +1018,7 @@ document.addEventListener("click", async e => {
   if (d.fav) { S.sheet.keep = true; await act("fav", { pid: d.fav }, isFav(d.fav) ? "Quitado de favoritos" : "Añadido a favoritos"); if (S.sheet) { S.sheet.keep = true; renderSheet(); S.sheet.keep = false; } return; }
   if (d.hist) { S.hist = S.hist === d.hist ? null : d.hist; S.sheet.keep = true; renderSheet(); S.sheet.keep = false; return; }
   if (d.fj) { const [pid, n] = d.fj.split(":"); S.fj[pid] = +n; S.sheet.keep = true; renderSheet(); S.sheet.keep = false; return; }
-  if (d.bid) { S.sheet = { t: "bid", id: d.bid, prev: S.sheet && S.sheet.t === "ficha" ? S.sheet : null }; return renderSheet(); }
+  if (d.bid) { const cur0 = S.sheet; S.sheet = { t: "bid", id: d.bid, prev: cur0 && (cur0.t === "ficha" || cur0.t === "rival") ? cur0 : cur0 && cur0.t === "acts" ? cur0.prev : null }; return renderSheet(); }
   if (d.acts) { S.sheet = { t: "acts", id: d.acts, prev: S.sheet && (S.sheet.t === "ficha" || S.sheet.t === "rival") ? S.sheet : null }; return renderSheet(); }
   if (d.rival) { S.sheet = { t: "rival", u: d.rival }; return renderSheet(); }
   if (d.rtab) { S.sheet.tab = d.rtab; S.sheet.keep = false; return renderSheet(); }
@@ -1013,7 +1026,7 @@ document.addEventListener("click", async e => {
   if (d.racts) { S.sheet.menu = d.racts; S.sheet.keep = true; renderSheet(); S.sheet.keep = false; return; }
   if (d.rmenu) { if (e.target !== b) return; S.sheet.menu = null; S.sheet.keep = true; renderSheet(); S.sheet.keep = false; return; }
   if (d.rclno) { if (e.target !== b) return; S.sheet.cl = null; S.sheet.keep = true; renderSheet(); S.sheet.keep = false; return; }
-  if (d.rclok) { const id = d.rclok; S.sheet.cl = null; return act("payClause", { pid: id }, "¡Clausulazo! " + PL(id).n + " ya es tuyo"); }
+  if (d.rclok) { const id = d.rclok; S.sheet.cl = null; if (S.sheet.t === "acts") S.sheet = S.sheet.prev || null; return act("payClause", { pid: id }, "¡Clausulazo! " + PL(id).n + " ya es tuyo"); }
   if (d.mcancel) { return act("mgrCancel", { pid: d.mcancel }, "Oferta retirada"); }
   if (d.macc) { const [pid, from] = d.macc.split("|"); S.sheet = null; return act("mgrAccept", { pid, from }, PL(pid).n + " vendido a " + teamName(from)); }
   if (d.mrej) { const [pid, from] = d.mrej.split("|"); return act("mgrReject", { pid, from }, "Oferta rechazada"); }
@@ -1050,10 +1063,11 @@ document.addEventListener("click", async e => {
       if (a === "newlg") toast("Liga creada. Pasa el código " + r.code + " a tus amigos."); await refresh(); S.sheet = { t: "present" }; renderSheet(); }
     catch (e) { toast(e.message); } return; }
   if (a === "logout") { api("logout").catch(() => {}); try { localStorage.removeItem(TK); } catch (e) {} return location.reload(); }
-  if (a === "dobid") { const v = +document.getElementById("bidv").value; const id = S.sheet.id, it = S.st.market.find(i => i.pid === id), mn = it ? Math.max(it.price, val(id)) : 0;
+  if (a === "bidclr") { const i = document.getElementById("bidv"); i.value = ""; i.focus(); return; }
+  if (a === "dobid") { const v = +String(document.getElementById("bidv").value).replace(/\D/g, ""); const id = S.sheet.id, it = S.st.market.find(i => i.pid === id), mn = it ? Math.max(it.price, val(id)) : 0;
     if (!(v >= mn)) return toast("No puedes pujar por menos de su valor: " + eur(mn) + " €.");
     try { await api("bid", { pid: id, amount: v }); } catch (e) { return /endeudamiento/.test(e.message) ? aviso(e.message) : toast(e.message); }
-    toast("Puja guardada: " + eur(v) + " €"); S.sheet = null; await refresh(); return; }
+    toastOk("Has pujado " + eur(v) + " € por " + PL(id).n); S.sheet = S.sheet && S.sheet.prev || null; await refresh(); return; }
   if (a === "nobid") { const id = S.sheet.id; S.sheet = null; return act("bid", { pid: id, amount: 0 }, "Puja retirada"); }
   if (a === "offerask") { S.sheet.confirm = true; return renderSheet(); }
   if (a === "offerok") { const id = S.sheet.id, it = S.st.market.find(i => i.pid === id && i.seller === S.st.me); S.sheet = null; return act("acceptOffer", { pid: id }, "Vendido a LIGA por " + eur(it ? it.offer : 0) + " €"); }
@@ -1067,7 +1081,8 @@ document.addEventListener("click", async e => {
   if (a === "sellpage") { S.sheet = { t: "sell", id: S.sheet.id, prev: S.sheet.prev }; return renderSheet(); }
   if (a === "pen") { const i = document.querySelector(".spill input"); i.focus(); i.select(); return; }
   if (a === "mofclr") { const i = document.getElementById("mofv"); i.value = ""; i.focus(); return; }
-  if (a === "mofpage") { const rv = S.sheet; rv.menu = null; S.sheet = { t: "mof", id: b.dataset.pid, prev: rv }; return renderSheet(); }
+  if (a === "oldacts") { S.sheet.old = 1; return renderSheet(); }
+  if (a === "mofpage") { const rv = S.sheet; rv.menu = null; S.sheet = { t: "mof", id: b.dataset.pid, prev: rv.t === "acts" ? rv.prev : rv }; return renderSheet(); }
   if (a === "rclause") { const id = b.dataset.pid, ci = clauseInfo(id);
     if (!ci) return; if (now() < ci.until) return toast("Blindado hasta el " + fmtWhen(ci.until) + "."); if (GAME.clauseBlocked(now())) return toast("Los viernes no se pueden pagar cláusulas.");
     if (S.st.team.money < ci.c) return toast("Te faltan " + eur(ci.c - S.st.team.money) + " € para pagar la cláusula.");
@@ -1083,7 +1098,7 @@ document.addEventListener("click", async e => {
 });
 function confirm2(b) { if (b.dataset.sure) return true; b.dataset.sure = "1"; b.textContent = "¿Seguro?"; return false; }
 document.addEventListener("submit", e => { if (e.target.id === "auform") { e.preventDefault(); auth(S.authTab === "up" ? "up" : "in"); } });
-document.addEventListener("input", e => { if ((e.target.id === "listv" && S.sheet && S.sheet.t === "sell") || e.target.id === "mofv") { e.target.value = fmtN(+e.target.value.replace(/\D/g, "")); return; } if (e.target.id === "sq") { S.sheet.q = e.target.value; const r = document.getElementById("sres"); if (r) r.innerHTML = searchResults(S.sheet.q); } });
+document.addEventListener("input", e => { if ((e.target.id === "listv" && S.sheet && S.sheet.t === "sell") || e.target.id === "mofv" || e.target.id === "bidv") { e.target.value = fmtN(+e.target.value.replace(/\D/g, "")); return; } if (e.target.id === "sq") { S.sheet.q = e.target.value; const r = document.getElementById("sres"); if (r) r.innerHTML = searchResults(S.sheet.q); } });
 document.addEventListener("change", async e => {
   if (e.target.id === "form") { const f = e.target.value, l = myLineup(), rows = GAME.FORMS[f];
     const byPos = { POR: [], DEF: [], CEN: [], DEL: [] }; l.s.forEach(id => { if (id && PL(id)) byPos[posOf(id)].push(id); });
