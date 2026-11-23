@@ -208,10 +208,17 @@ async function payJornada(n, Jn, leagues) {
       }
 }
 // Jornadas automáticas: cuando se juega una jornada, se bajan las actas de elbalondelacomunitat.es y se publica sola.
-// Se mira como mucho cada 20 min (y una vez al día con el cron de Vercel).
+// Se mira como mucho cada 2 h, solo de viernes 21:00 a lunes 12:00 (hora de Madrid), más el cron del lunes a las 12:00.
 // Si falta algún partido, 6 h después del último se publica con los jugados; si el que faltaba se juega más tarde, se vuelve a publicar.
-async function autoJornada(leagues, force) {
-  if (force) await redis("SET", "auto:chk", "1", "EX", 60); else if (!(await redis("SET", "auto:chk", "1", "NX", "EX", 1200))) return { msg: "Ya se ha mirado hace poco." };
+function finde(t) {   // viernes 21:00 → lunes 12:00, hora de Madrid
+  const f = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Madrid", weekday: "short", hour: "numeric", hourCycle: "h23" }).formatToParts(new Date(t));
+  const wd = f.find(x => x.type === "weekday").value, h = +f.find(x => x.type === "hour").value;
+  return (wd === "Fri" && h >= 21) || wd === "Sat" || wd === "Sun" || (wd === "Mon" && h < 12);
+}
+async function autoJornada(leagues, force, cron) {
+  if (force) await redis("SET", "auto:chk", "1", "EX", 60);
+  else { if (!cron && !finde(Date.now())) return { msg: "Fuera del horario de búsqueda." };
+    if (!(await redis("SET", "auto:chk", "1", "NX", "EX", 7200))) return { msg: "Ya se ha mirado hace poco." }; }
   const imp = await hgetall("jornadas"), out = [];
   let n = G.FIRST_J; while (imp[n]) n++;
   const todo = Object.values(imp).filter(J => J.faltan > 0 && J.n < n).map(J => J.n).concat([n]);
@@ -269,7 +276,7 @@ module.exports = async (req, res) => {
       return send(200, { token: await newSession(name) });
     }
 
-    if (req.query && req.query.cron) { const r = await autoJornada(await allLeagues(), false).catch(e => ({ msg: e.message })); return send(200, r); }
+    if (req.query && req.query.cron) { const r = await autoJornada(await allLeagues(), false, true).catch(e => ({ msg: e.message })); return send(200, r); }
     const me = await whoami(req);
     if (!me) return send(401, { error: "Sesión caducada. Vuelve a entrar." });
     const admin = me.admin || norm(process.env.ADMIN_USER) === me.name;
