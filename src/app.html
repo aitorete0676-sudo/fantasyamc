@@ -422,7 +422,7 @@ const fantasyJ = () => allJ().filter(J => J.n >= GAME.POINTS_FROM && J.publicada
 const ptsOf = (id, J) => GAME.points(posOf(id), J, id);
 function seasonOf(id) { let pf = 0, apps = 0; allJ().forEach(J => { pf += ptsOf(id, J); if (GAME.mins(J, id) > 0) apps++; }); return { pf, apps, media: apps ? pf / apps : 0 }; }
 const val = id => (S.st.prices.v[id] || 0);
-const ownerOf = id => S.st.owner[id] || null;
+const ownerOf = id => Object.keys(S.st.teams || {}).find(u => (S.st.teams[u].squad || []).includes(id)) || S.st.owner[id] || null;   // la plantilla manda
 const teamName = u => ((S.st.teams[u] || {}).name) || u;
 const mySquad = () => S.st.team.squad.filter(PL);
 const cur = () => S.st.current;
