@@ -335,6 +335,17 @@ module.exports = async (req, res) => {
           await setJ(kk("team:") + u, t);
           await log(kk, "market", `${t.name || u} ha recibido ${add.length} jugador${add.length > 1 ? "es" : ""} que le faltaban del reparto: ${add.map(id => PL[id].n).join(", ")}`); } }
     }
+    if (await redis("SET", "mig:redeal1", "1", "NX")) {   // una vez: plantillas del reparto que se fueron de valor por el fallo de dueños antiguos → se reparten otra vez (~100 M)
+      const pr = await getPrices();
+      for (const code of Object.keys(leagues)) { const kk = keysOf(code);
+        for (const u of (await redis("SMEMBERS", kk("users"))) || []) { const t = await getJ(kk("team:") + u); if (!t || !t.joined) continue;
+          const v = (t.squad || []).reduce((a, id) => a + (pr.v[id] || 0), 0), ini = (t.squad || []).every(id => Math.abs(((t.since || {})[id] || 0) - t.joined) < 60e3 || ((t.since || {})[id] || 0) === t.joined);
+          if (!["arnau", "catala12", "condebrb", "molinetiiii"].includes(u) || Math.abs(v - G.START_VALUE) <= 12e6) continue;   // solo los 4 que pidió Aitor
+          for (const id of t.squad) await redis("HDEL", kk("owner"), id);
+          const nt = await newTeam(kk, u); t.squad = nt.squad; t.cl = nt.cl; t.since = nt.since; t.joined = Date.now(); t.lineups = {}; await setJ(kk("team:") + u, t);
+          const nv = t.squad.reduce((a, id) => a + (pr.v[id] || 0), 0);
+          await log(kk, "info", `A ${t.name || u} se le ha repartido otra vez la plantilla por un fallo del reparto (valía ${Math.round(v / 1e6)} M; ahora ${Math.round(nv / 1e6)} M).`); } }
+    }
     if (await redis("SET", "mig:cl53", "1", "NX")) {   // una vez: cláusula de los jugadores del reparto inicial = valor × 5/3
       const pr = await getPrices();
       for (const code of Object.keys(leagues)) { const kk = keysOf(code);
