@@ -697,12 +697,14 @@ function adminView() {
   if (!S.st.admin) return '<div class="empty">Solo el administrador importa las jornadas.</div>';
   const c = cur(), imp = S.imp;
   const pub = Object.values(S.st.jornadas).sort((a, b) => b.n - a.n);
-  return `<div class="box"><h3>Publicar jornada ${c.n}</h3>
+  return `<div class="box"><h3>Jornadas automáticas</h3><p>Cuando se juega una jornada, el juego baja las actas de elbalondelacomunitat.es y publica los puntos solo (lo mira cada 20 minutos desde el viernes 21:00). Si falta algún partido, a las 6 horas del último publica los jugados; cuando se juegue el que faltaba, lo vuelve a calcular.</p>
+    <button class="abtn" data-act="autoj">Buscar ahora</button>${S.autoMsg ? `<p class="note" style="margin-top:8px">${esc(S.autoMsg)}</p>` : ""}</div>
+    <div class="box"><h3>Publicar jornada ${c.n} a mano</h3>
     <p>Sube los archivos de las actas de la jornada (los JSON de <b>datos-liga/actas</b>, uno por partido). Se calculan los puntos de todos y se reparte el dinero.</p>
     <input type="file" id="actas" accept=".json,application/json" multiple class="inp">
     ${imp ? `<p style="margin-top:10px">${imp.err ? `<b class="dn">${esc(imp.err)}</b>` : `Jornada <b>${imp.n}</b>: ${imp.matches.length} partidos, ${Object.keys(imp.st).length} jugadores con datos${imp.unknown ? `, ${imp.unknown} jugadores nuevos que no están en el juego` : ""}.`}</p>
       ${imp.err ? "" : `<div class="row2"><button class="abtn" data-act="pub">Publicar puntos de la J${imp.n}</button></div>`}` : ""}</div>
-    ${pub.length ? `<div class="box"><h3>Jornadas publicadas</h3><table>${pub.map(J => `<tr><td>J${J.n} · ${J.matches.length} partidos</td><td><button class="gbtn" data-unpub="${J.n}">Quitar</button></td></tr>`).join("")}</table></div>` : ""}
+    ${pub.length ? `<div class="box"><h3>Jornadas publicadas</h3><table>${pub.map(J => `<tr><td>J${J.n} · ${J.matches.length} partidos${J.auto ? " · automática" : ""}${J.faltan ? " · faltan " + J.faltan : ""}</td><td><button class="gbtn" data-unpub="${J.n}">Quitar</button></td></tr>`).join("")}</table></div>` : ""}
     <div class="box"><h3>Corregir posición</h3><p>Fuera del Almazora C, las posiciones salen del dorsal y los goles. Si alguna está mal, búscalo con la lupa, abre su ficha y cámbiala ahí.</p></div>`;
 }
 // Mismo cálculo que datos/extraer_liga.js (GAME.parseActa): minutos, goles, gol decisivo, encajados en el campo, tarjetas…
@@ -908,6 +910,7 @@ document.addEventListener("click", async e => {
   if (a === "listok") { const id = S.sheet.id, v = +String(document.getElementById("listv").value).replace(/\D/g, "");
     if (!(v >= val(id))) return toast("El precio mínimo es su valor: " + eur(val(id)) + " €.");
     const prev = S.sheet.prev || null; S.sheet = prev; if (await act("list", { pid: id, price: v })) toastOk("Has añadido a " + PL(id).n + " al mercado correctamente"); else renderSheet(); return; }
+  if (a === "autoj") { b.disabled = true; try { const r = await api("autoJornada", {}); S.autoMsg = r.msg; await refresh(); } catch (e) { S.autoMsg = e.message; render(); } return; }
   if (a === "pub") { const J = S.imp; if (!J || J.err) return; b.disabled = true; if (await act("importJornada", { jornada: { n: J.n, matches: J.matches, st: J.st } }, "Puntos de la J" + J.n + " publicados")) { S.imp = null; render(); } else b.disabled = false; return; }
 });
 function confirm2(b) { if (b.dataset.sure) return true; b.dataset.sure = "1"; b.textContent = "¿Seguro?"; return false; }

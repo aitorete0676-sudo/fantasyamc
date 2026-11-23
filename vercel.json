@@ -1,3 +1,4 @@
 {
-  "headers": [{ "source": "/(.*)", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }]
+  "headers": [{ "source": "/(.*)", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }],
+  "crons": [{ "path": "/api/fantasy?cron=1", "schedule": "0 8 * * *" }]
 }

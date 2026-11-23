@@ -3,6 +3,7 @@
 const crypto = require("crypto");
 const G = require("../game.js");
 const LIGA = require("../liga.json");
+const FF = require("../ffcv.js");
 
 const envKey = suf => process.env["KV" + suf] ? "KV" + suf : Object.keys(process.env).find(k => k.endsWith(suf) && !k.includes("READ_ONLY"));
 const URL_ = process.env[envKey("_REST_API_URL")] || process.env.UPSTASH_REDIS_REST_URL;
@@ -185,6 +186,56 @@ async function newTeam(k, name) {
   best.squad.forEach(id => gain(t, id, pr.v[id] || 0)); return t;
 }
 
+/* ---------- publicar una jornada: puntos y dinero en todas las ligas (Jn = null la quita) ---------- */
+async function payJornada(n, Jn, leagues) {
+      for (const code of Object.keys(leagues)) {
+        const kk = keysOf(code), users = (await redis("SMEMBERS", kk("users"))) || [], prevPts = (await hgetall(kk("points")))[n] || {};
+        if (!Jn) {
+          for (const u of users) { const t = await getJ(kk("team:") + u); if (!t) continue; t.money -= Math.max(0, prevPts[u] || 0) * G.PER_POINT; await setJ(kk("team:") + u, t); }
+          await redis("HDEL", kk("points"), String(n)); continue;
+        }
+        await snapLeague(kk, n, true);
+        const pts = {}, logs = [];
+        for (const u of users) { const t = await getJ(kk("team:") + u); if (!t) continue;
+          const r = G.teamPoints(t, Jn, posOf); pts[u] = r.total;
+          t.money += (Math.max(0, r.total || 0) - Math.max(0, prevPts[u] || 0)) * G.PER_POINT; await setJ(kk("team:") + u, t);
+          logs.push(r.total == null ? ["nopts", `En la jornada ${n}, ${t.name || u} no ha puntuado debido a ${r.why === "neg" ? "saldo negativo" : "alineación incompleta"}.`]
+            : ["reward", `En la jornada ${n}, ${t.name || u} ha ganado ${(Math.max(0, r.total) * G.PER_POINT).toLocaleString("es-ES")}€ (${r.total} puntos)`]); }
+        if (!users.length) continue;
+        await redis("HSET", kk("points"), String(n), JSON.stringify(pts));
+        for (const [t, x] of logs) await log(kk, t, x);
+        await log(kk, "jornada", `Puntos de la jornada ${n} publicados.`);
+      }
+}
+// Jornadas automáticas: cuando se juega una jornada, se bajan las actas de elbalondelacomunitat.es y se publica sola.
+// Se mira como mucho cada 20 min (y una vez al día con el cron de Vercel).
+// Si falta algún partido, 6 h después del último se publica con los jugados; si el que faltaba se juega más tarde, se vuelve a publicar.
+async function autoJornada(leagues, force) {
+  if (force) await redis("SET", "auto:chk", "1", "EX", 60); else if (!(await redis("SET", "auto:chk", "1", "NX", "EX", 1200))) return { msg: "Ya se ha mirado hace poco." };
+  const imp = await hgetall("jornadas"), out = [];
+  let n = G.FIRST_J; while (imp[n]) n++;
+  const todo = Object.values(imp).filter(J => J.faltan > 0 && J.n < n).map(J => J.n).concat([n]);
+  const idx = {}; LIGA.teams.forEach((t, i) => idx[t.name.trim().toLowerCase()] = i);
+  const tid = x => idx[String(x).trim().toLowerCase()];
+  for (const jn of todo) {
+    const ps = await FF.jornada(jn); if (!ps.length) { out.push(`J${jn}: sin partidos`); continue; }
+    const played = ps.filter(p => p.jugado), faltan = ps.length - played.length, last = Math.max(...ps.map(p => p.ts || 0));
+    if (!played.length) { out.push(`J${jn}: aún no se ha jugado`); continue; }
+    if (imp[jn] && imp[jn].faltan === faltan) { out.push(`J${jn}: sin cambios`); continue; }
+    if (faltan && Date.now() < last + 6 * 3600e3) { out.push(`J${jn}: faltan ${faltan} partidos por jugar`); continue; }
+    const actas = await Promise.all(played.map(p => FF.actaHtml(p.cod).then(h => FF.parseActaHtml(h, p.cod, p.local, p.visitante)).catch(() => null)));
+    const matches = [], st = {}; let bad = 0;
+    for (const d of actas) { if (!d || tid(d.local) == null || tid(d.visitante) == null) { bad++; continue; }
+      const r = G.parseActa(d, tid); matches.push(r.match); Object.entries(r.st).forEach(([pid, x]) => { if (PL[pid]) st[pid] = x; }); }
+    if (bad) { out.push(`J${jn}: no se han podido leer ${bad} actas`); continue; }
+    matches.sort((a, b) => a[4] < b[4] ? -1 : 1);
+    const Jn = { n: jn, matches, st, publicada: Date.now(), auto: 1, faltan: faltan + bad };
+    await redis("HSET", "jornadas", String(jn), JSON.stringify(Jn)); await payJornada(jn, Jn, leagues);
+    out.push(`J${jn} publicada (${matches.length} partidos${faltan ? ", faltan " + faltan : ""})`);
+  }
+  return { msg: out.join(" · ") };
+}
+
 module.exports = async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   const send = (code, obj) => res.status(code).json(obj);
@@ -218,6 +269,7 @@ module.exports = async (req, res) => {
       return send(200, { token: await newSession(name) });
     }
 
+    if (req.query && req.query.cron) { const r = await autoJornada(await allLeagues(), false).catch(e => ({ msg: e.message })); return send(200, r); }
     const me = await whoami(req);
     if (!me) return send(401, { error: "Sesión caducada. Vuelve a entrar." });
     const admin = me.admin || norm(process.env.ADMIN_USER) === me.name;
@@ -239,7 +291,10 @@ module.exports = async (req, res) => {
       await joinLeague(code, me.name); return send(200, { ok: true, code });
     }
 
-    const J = await allJornadas(), cur = currentJ(J), locked = cur.lock && Date.now() >= cur.lock;
+    if (a === "autoJornada") { if (!admin) return send(403, { error: "Solo el administrador puede hacer esto." }); return send(200, await autoJornada(leagues, true)); }
+    let J = await allJornadas(), cur = currentJ(J), locked = cur.lock && Date.now() >= cur.lock;
+    if (a === "state" && locked) { const r = await autoJornada(leagues, false).catch(() => null);   // la jornada ya empezó: ¿hay actas nuevas?
+      if (r && / publicada/.test(r.msg)) { J = await allJornadas(); cur = currentJ(J); locked = cur.lock && Date.now() >= cur.lock; } }
     const lgList = mineL.filter(c => leagues[c]).map(c => ({ code: c, name: leagues[c].name, admin: leagues[c].admin, hm: hmOf(leagues[c]) }));
     const lg = mineL.includes(b.lg) ? b.lg : mineL[0];
     if (!lg) {   // todavía sin liga: solo puede crear una o unirse
@@ -389,25 +444,7 @@ module.exports = async (req, res) => {
         const jj = b.jornada; if (!jj || !Array.isArray(jj.matches) || typeof jj.st !== "object") return send(400, { error: "Faltan los partidos o las estadísticas." });
         Jn = { n, matches: jj.matches, st: jj.st, publicada: Date.now() }; await redis("HSET", "jornadas", String(n), JSON.stringify(Jn));
       } else await redis("HDEL", "jornadas", String(n));
-      // los puntos y el dinero se reparten en todas las ligas
-      for (const code of Object.keys(leagues)) {
-        const kk = keysOf(code), users = (await redis("SMEMBERS", kk("users"))) || [], prevPts = (await hgetall(kk("points")))[n] || {};
-        if (!Jn) {
-          for (const u of users) { const t = await getJ(kk("team:") + u); if (!t) continue; t.money -= Math.max(0, prevPts[u] || 0) * G.PER_POINT; await setJ(kk("team:") + u, t); }
-          await redis("HDEL", kk("points"), String(n)); continue;
-        }
-        await snapLeague(kk, n, true);
-        const pts = {}, logs = [];
-        for (const u of users) { const t = await getJ(kk("team:") + u); if (!t) continue;
-          const r = G.teamPoints(t, Jn, posOf); pts[u] = r.total;
-          t.money += (Math.max(0, r.total || 0) - Math.max(0, prevPts[u] || 0)) * G.PER_POINT; await setJ(kk("team:") + u, t);
-          logs.push(r.total == null ? ["nopts", `En la jornada ${n}, ${t.name || u} no ha puntuado debido a ${r.why === "neg" ? "saldo negativo" : "alineación incompleta"}.`]
-            : ["reward", `En la jornada ${n}, ${t.name || u} ha ganado ${(Math.max(0, r.total) * G.PER_POINT).toLocaleString("es-ES")}€ (${r.total} puntos)`]); }
-        if (!users.length) continue;
-        await redis("HSET", kk("points"), String(n), JSON.stringify(pts));
-        for (const [t, x] of logs) await log(kk, t, x);
-        await log(kk, "jornada", `Puntos de la jornada ${n} publicados.`);
-      }
+      await payJornada(n, Jn, leagues);
       return send(200, { ok: true });
     }
     if (a === "logout") { await redis("DEL", "sess:" + (req.headers.authorization || "").replace(/^Bearer\s+/i, "")); return send(200, { ok: true }); }
