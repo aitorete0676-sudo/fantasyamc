@@ -334,7 +334,7 @@ module.exports = async (req, res) => {
       const owner = {}; for (let i = 0; i < (ownerArr || []).length; i += 2) owner[ownerArr[i]] = ownerArr[i + 1];
       const teams = {};
       for (const u of users) { const t = u === me.name ? mine : await getJ(k("team:") + u); if (!t) continue;
-        teams[u] = { name: t.name, squad: t.squad, lineups: t.lineups, cl: Object.fromEntries(t.squad.map(id => [id, clauseOf(t, id, pr)])), since: t.since || {}, joined: t.joined || 0 }; }   // el dinero de los demás no se enseña
+        teams[u] = { name: t.name, squad: t.squad, lineups: t.lineups, cl: Object.fromEntries(t.squad.map(id => [id, clauseOf(t, id, pr)])), since: t.since || {}, joined: t.joined || 0, snap: t.snap || {} }; }   // el dinero de los demás no se enseña
       const myBids = {}, nb = {}; for (const it of (market ? market.items : [])) { const all = await hgetall(k("bids:") + it.pid); nb[it.pid] = Object.keys(all).length; if (all[me.name]) myBids[it.pid] = all[me.name].amount; }
       const offersIn = [], offersOut = []; for (const [f, o] of Object.entries(await hgetall(k("offers")))) {
         if (owner[o.pid] !== o.to) { await redis("HDEL", k("offers"), f); continue; }
