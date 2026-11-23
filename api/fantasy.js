@@ -340,6 +340,33 @@ module.exports = async (req, res) => {
           await setJ(kk("team:") + u, t);
           await log(kk, "market", `${t.name || u} ha recibido ${add.length} jugador${add.length > 1 ? "es" : ""} que le faltaban del reparto: ${add.map(id => PL[id].n).join(", ")}`); } }
     }
+    if (await redis("SET", "mig:bal1", "1", "NX")) {   // Aitor (2026-11-23 17:24): equilibrar por el valor del reparto inicial (sin contar fichajes ni ventas); a los que se quedaron por debajo se les dan jugadores libres de hasta 30 M
+      const pr = await getPrices(), V = id => pr.v[id] || 0, TARGET = 100e6;
+      for (const code of Object.keys(leagues)) { const kk = keysOf(code);
+        if (!(await redis("SISMEMBER", kk("users"), "aiitorjiimeneez"))) continue;
+        const users = (await redis("SMEMBERS", kk("users"))) || [], teams = {}; for (const u of users) { const t = await getJ(kk("team:") + u); if (t) teams[u] = t; }
+        const logs = ((await redis("LRANGE", kk("log"), 0, 299)) || []).map(x => { try { return typeof x === "string" ? JSON.parse(x) : x; } catch (e) { return null; } }).filter(Boolean);
+        const nameOf = u => teams[u].name || u, byN = n => Object.keys(teams).find(u => nameOf(u) === n || u === n), pidOf = n => Object.keys(PL).filter(i => PL[i].n === n);
+        const sold = {}; const addSold = (u, n) => { if (!u) return; const ids = pidOf(n); if (ids.length === 1) (sold[u] = sold[u] || new Set()).add(ids[0]); };
+        for (const L of logs) { const tx = L.text || ""; let m;
+          if ((m = /^(.*) ha vendido a (.*) a LIGA por/.exec(tx))) addSold(byN(m[1]), m[2]);
+          else if ((m = /^.* ha fichado a (.*) de (.*) por [\d.]+€ \(oferta aceptada\)$/.exec(tx))) addSold(byN(m[2]), m[1]);
+          else if ((m = /^.* ha comprado a (.*) a (.*) por [\d.]+€/.exec(tx)) && m[2] !== "LIGA") addSold(byN(m[2]), m[1]);
+          else if ((m = /^¡Clausulazo! .* ha pagado la cláusula de (.*) a (.*): [\d.]+€$/.exec(tx))) addSold(byN(m[2]), m[1]); }
+        const taken = new Set(); Object.values(teams).forEach(t => (t.squad || []).forEach(id => taken.add(id)));
+        const mk = await getJ(kk("market")); (mk ? mk.items : []).forEach(i => taken.add(i.pid));
+        const rows = [];
+        for (const u of Object.keys(teams)) { const t = teams[u];
+          const ini = new Set((t.squad || []).filter(id => Math.abs(((t.since || {})[id] || 0) - (t.joined || 0)) < 60e3)); (sold[u] || []).forEach(id => ini.add(id));
+          let iv = [...ini].reduce((a, id) => a + V(id), 0); const add = [];
+          while (iv < TARGET - 3e6 && (t.squad || []).length < G.MAX_SQUAD) { const gap = TARGET - iv;
+            const c = LIGA.players.filter(p => !taken.has(p.id) && V(p.id) <= 30e6 && V(p.id) > 0).sort((a, b) => Math.abs(V(a.id) - gap) - Math.abs(V(b.id) - gap))[0]; if (!c) break;
+            add.push(c.id); taken.add(c.id); t.squad.push(c.id); t.cl = t.cl || {}; t.since = t.since || {}; t.cl[c.id] = Math.round(V(c.id) * G.CLAUSE_START); t.since[c.id] = t.joined || Date.now(); iv += V(c.id);
+            await redis("HSET", kk("owner"), c.id, u); }
+          if (add.length) { await setJ(kk("team:") + u, t); await log(kk, "info", `${nameOf(u)}: su plantilla inicial valía ${Math.round((iv - add.reduce((a, id) => a + V(id), 0)) / 1e6)} M; recibe ${add.map(id => PL[id].n + " (" + Math.round(V(id) / 1e6) + " M)").join(", ")} y queda en ${Math.round(iv / 1e6)} M.`); }
+          rows.push(nameOf(u) + " " + Math.round(iv / 1e6) + " M"); }
+        await log(kk, "info", "Valor de la plantilla inicial de cada equipo (sin fichajes ni ventas): " + rows.join(" · ")); }
+    }
     if (await redis("SET", "mig:reset1", "1", "NX")) {   // Aitor (2026-11-23): Liga Almazora C desde cero: 11 jugadores (1-4-4-2) de ~100 M, nadie de más de 20 M, 150 M para fichar
       for (const k of ["mig:clref", "mig:own1", "mig:fill1", "mig:redeal1", "mig:redeal2", "mig:cl53"]) await redis("SET", k, "1");   // los arreglos anteriores ya no hacen falta
       const kk = keysOf(LEGACY), pr = await getPrices(), users = ((await redis("SMEMBERS", kk("users"))) || []).sort(() => Math.random() - 0.5);
