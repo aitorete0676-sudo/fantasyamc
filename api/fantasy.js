@@ -100,6 +100,8 @@ async function tick(k) {
   let market = await getJ(k("market"));
   const next = market ? (market.next || (market.day === today ? G.nextMidnight(Date.now()) : 0)) : 0;   // los mercados de antes no tenían "next"
   const daily = !market || next <= Date.now(), due = market && market.items.some(it => it.seller !== "LIGA" && it.ends <= Date.now());
+  if (!daily && market.items.some(it => it.seller === "LIGA" && it.ends > next)) {   // jugadores de LIGA: 24 h (de 16:00 a 16:00)
+    market.items.forEach(it => { if (it.seller === "LIGA" && it.ends > next) it.ends = next; }); await setJ(k("market"), market); }
   if (!daily && !due) return;   // a las 16:00 cambia el mercado; los jugadores de los mánagers se van justo a las 48 h
   if (!(await redis("SET", k("lock:tick"), "1", "NX", "EX", 30))) return;
   try {
@@ -132,7 +134,7 @@ async function tick(k) {
       for (const it of market.items) if (it.seller !== "LIGA") it.offer = ligaOffer(pr.v[it.pid] || it.price);
     }
     // 2) mercado nuevo: jugadores libres al azar (más probables los que valen más)
-    const next = G.nextClose(Date.now(), k.hm), ends = G.nextClose(next, k.hm), inMk = new Set((market ? market.items : []).map(i => i.pid));
+    const next = G.nextClose(Date.now(), k.hm), ends = next, inMk = new Set((market ? market.items : []).map(i => i.pid));
     const free = LIGA.players.filter(p => !own[p.id] && !inMk.has(p.id));
     const pick = []; const pool = free.map(p => ({ p, w: Math.random() * (1 + Math.min(4, (pr.v[p.id] || 0) / 4e6)) })).sort((a, b) => b.w - a.w);
     pool.slice(0, G.MARKET_SIZE).forEach(x => pick.push({ pid: x.p.id, seller: "LIGA", price: pr.v[x.p.id], ends }));
