@@ -114,9 +114,9 @@ async function priceTick() {
 }
 
 /* ---------- cambio de día en una liga: se cierran las pujas y sale mercado nuevo ---------- */
-// Elige n jugadores libres al azar; los que valen más salen algo menos (Aitor 24/11: "2 o 3 buenos", no todos malos): a 40 M o más, la mitad de probable
+// Elige n jugadores libres al azar; los que valen más salen algo menos (Aitor 24/11: "2 o 3 buenos", no todos malos): a 40 M o más, 2/3 de probable (Aitor: que los de 60 M+ no tarden tanto)
 function pickLiga(free, pr, n) {
-  return free.map(p => ({ p, r: Math.pow(Math.random(), 1 + Math.min(1, (pr.v[p.id] || 0) / 40e6)) })).sort((a, b) => b.r - a.r).slice(0, n).map(x => x.p);
+  return free.map(p => ({ p, r: Math.pow(Math.random(), 1 + 0.5 * Math.min(1, (pr.v[p.id] || 0) / 40e6)) })).sort((a, b) => b.r - a.r).slice(0, n).map(x => x.p);
 }
 async function tick(k) {
   const today = G.day(Date.now()), pr = await priceTick();
