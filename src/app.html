@@ -597,6 +597,7 @@ function lineView() {
 
 /* ---- tarjeta de jugador (plantilla y mercado) ---- */
 // Tarjeta del mercado, como en LaLiga Fantasy
+function rnd(it) { let h = 2166136261; for (const c of it.pid + "|" + (it.ends || 0)) h = Math.imul(h ^ c.charCodeAt(0), 16777619); return h >>> 0; }
 function mcard(item) {
   const id = item.pid, p = PL(id), se = seasonOf(id), my = S.st.myBids[id], mine = item.seller === S.st.me;
   const mo = item.seller !== "LIGA" && offOut().find(o => o.pid === id);
@@ -657,7 +658,7 @@ function offRow(o, inc) {
     <div class="ofb">${inc ? `<button class="gbtn" data-mrej="${o.pid}|${esc(o.from)}">Rechazar</button><button class="abtn sm" data-macc="${o.pid}|${esc(o.from)}" ${locked() ? "disabled" : ""}>Aceptar</button>` : `<button class="gbtn" data-mcancel="${o.pid}">Retirar</button>`}</div></div>`;
 }
 function marketView() {
-  const pos = S.mpos, items = S.st.market.filter(i => PL(i.pid) && (pos === "ALL" || (pos === "FAV" ? isFav(i.pid) : posOf(i.pid) === pos))).sort((a, b) => (b.seller === "LIGA") - (a.seller === "LIGA") || val(b.pid) - val(a.pid));   // primero LIGA, abajo los de los mánager
+  const pos = S.mpos, items = S.st.market.filter(i => PL(i.pid) && (pos === "ALL" || (pos === "FAV" ? isFav(i.pid) : posOf(i.pid) === pos))).sort((a, b) => (b.seller === "LIGA") - (a.seller === "LIGA") || rnd(a) - rnd(b));   // primero LIGA, abajo los de los mánager; dentro, orden al azar (Aitor 24/11), fijo durante el día
   return rewardBox() + (offIn().length ? `<button class="ofban" data-sub="ops">Tienes ${offIn().length} oferta${offIn().length > 1 ? "s" : ""} de otros mánagers ›</button>` : "") + (items.length ? items.map(mcard).join("") : '<div class="empty">No hay jugadores en el mercado.</div>');
 }
 // Cláusula de un jugador con dueño: { owner, c, until (fin del blindaje) }
