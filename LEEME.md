@@ -33,3 +33,6 @@ Descarga las actas de la jornada (JSON, como las de `ALMABET/datos-liga/actas`) 
 | `liga.json` | Equipos, jugadores, actas J1–J8 y calendario (`node datos/extraer_liga.js RUTA/datos-liga`) |
 | `api/fantasy.js` | Servidor: cuentas, dinero, plantillas, pujas, precios y jornadas |
 | `config.js`, `manifest.json`, `sw.js`, `*.png` | Configuración e instalar como app |
+
+## Publicar
+Vercel (plan gratis) permite unos 100 despliegues al día. Cada push a main cuenta, así que conviene juntar los cambios (por ejemplo, todas las fotos de un equipo en un solo push).
