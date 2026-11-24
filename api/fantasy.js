@@ -117,6 +117,7 @@ async function priceTick() {
 async function tick(k) {
   const today = G.day(Date.now()), pr = await priceTick();
   let market = await getJ(k("market"));
+  const prevL = new Set(market ? market.items.filter(i => i.seller === "LIGA").map(i => i.pid) : []);   // los de LIGA de ayer no repiten hoy (Aitor 24/11)
   const next = market ? (market.next || (market.day === today ? G.nextMidnight(Date.now()) : 0)) : 0;   // los mercados de antes no tenían "next"
   const daily = !market || next <= Date.now(), due = market && market.items.some(it => it.seller !== "LIGA" && it.ends <= Date.now());
   if (!daily && market.items.some(it => it.seller === "LIGA" && it.ends > next)) {   // jugadores de LIGA: 24 h (de 16:00 a 16:00)
@@ -155,7 +156,7 @@ async function tick(k) {
     }
     // 2) mercado nuevo: jugadores libres al azar (más probables los que valen más)
     const next = G.nextClose(Date.now(), k.hm), ends = next, inMk = new Set((market ? market.items : []).map(i => i.pid));
-    const free = LIGA.players.filter(p => !own[p.id] && !inMk.has(p.id));
+    const free = LIGA.players.filter(p => !own[p.id] && !inMk.has(p.id) && !prevL.has(p.id));
     const pick = []; const pool = free.map(p => ({ p, w: Math.random() * (1 + Math.min(4, (pr.v[p.id] || 0) / 4e6)) })).sort((a, b) => b.w - a.w);
     pool.slice(0, G.MARKET_SIZE).forEach(x => pick.push({ pid: x.p.id, seller: "LIGA", price: pr.v[x.p.id], ends }));
     market = { day: today, next, items: (market ? market.items : []).concat(pick) };
