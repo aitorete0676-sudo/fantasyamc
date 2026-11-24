@@ -114,9 +114,9 @@ async function priceTick() {
 }
 
 /* ---------- cambio de día en una liga: se cierran las pujas y sale mercado nuevo ---------- */
-// Elige n jugadores libres al azar; los que valen más salen menos (Aitor 24/11): peso 1 hasta 1 M y baja hasta 1/5 a partir de 17 M
+// Elige n jugadores libres al azar; los que valen más salen algo menos (Aitor 24/11: "2 o 3 buenos", no todos malos): a 40 M o más, la mitad de probable
 function pickLiga(free, pr, n) {
-  return free.map(p => ({ p, r: Math.pow(Math.random(), 1 + Math.min(4, Math.max(0, (pr.v[p.id] || 0) - 1e6) / 4e6)) })).sort((a, b) => b.r - a.r).slice(0, n).map(x => x.p);
+  return free.map(p => ({ p, r: Math.pow(Math.random(), 1 + Math.min(1, (pr.v[p.id] || 0) / 40e6)) })).sort((a, b) => b.r - a.r).slice(0, n).map(x => x.p);
 }
 async function tick(k) {
   const today = G.day(Date.now()), pr = await priceTick();
@@ -319,7 +319,7 @@ module.exports = async (req, res) => {
     const me = await whoami(req);
     if (!me) return send(401, { error: "Sesión caducada. Vuelve a entrar." });
     const admin = me.admin || norm(process.env.ADMIN_USER) === me.name;
-    const MIGV = "2026-11-24a";   // subir esto al añadir una migración nueva; así no se comprueban todas en cada carga
+    const MIGV = "2026-11-24b";   // subir esto al añadir una migración nueva; así no se comprueban todas en cada carga
     const [leagues, migV] = await Promise.all([allLeagues(), redis("GET", "mig:ver")]);
     if (migV !== MIGV) {
     if (await redis("SET", "mig:clref", "1", "NX")) {   // una vez: se devuelve lo pagado por subir cláusulas y se deshace la subida
@@ -478,6 +478,7 @@ module.exports = async (req, res) => {
           for (const id of t.squad || []) { const sn = (t.since || {})[id]; if (sn && t.joined && Math.abs(sn - t.joined) < 60e3) { t.cl = t.cl || {}; t.cl[id] = Math.round((pr.v[id] || 0) * G.CLAUSE_START); ch = 1; } }
           if (ch) await setJ(kk("team:") + u, t); } }
     }
+    if (await redis("SET", "mig:mk2411b", "1", "NX")) await redis("DEL", "mig:mk2411");   // Aitor: demasiado malos → se rehace otra vez con el reparto suave
     if (await redis("SET", "mig:mk2411", "1", "NX")) {   // Aitor (2026-11-24): rehacer el mercado de LIGA de hoy con la nueva probabilidad (los caros salen menos)
       const pr = await getPrices();
       for (const code of Object.keys(leagues)) { const kk = keysOf(code), market = await getJ(kk("market")); if (!market) continue;
