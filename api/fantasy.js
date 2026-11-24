@@ -114,6 +114,10 @@ async function priceTick() {
 }
 
 /* ---------- cambio de día en una liga: se cierran las pujas y sale mercado nuevo ---------- */
+// Elige n jugadores libres al azar; los que valen más salen menos (Aitor 24/11): peso 1 hasta 1 M y baja hasta 1/5 a partir de 17 M
+function pickLiga(free, pr, n) {
+  return free.map(p => ({ p, r: Math.pow(Math.random(), 1 + Math.min(4, Math.max(0, (pr.v[p.id] || 0) - 1e6) / 4e6)) })).sort((a, b) => b.r - a.r).slice(0, n).map(x => x.p);
+}
 async function tick(k) {
   const today = G.day(Date.now()), pr = await priceTick();
   let market = await getJ(k("market"));
@@ -154,11 +158,10 @@ async function tick(k) {
       // LIGA hace su oferta diaria (a las 16:00) por cada jugador que los mánagers tienen a la venta
       for (const it of market.items) if (it.seller !== "LIGA") it.offer = ligaOffer(pr.v[it.pid] || it.price);
     }
-    // 2) mercado nuevo: jugadores libres al azar (más probables los que valen más)
+    // 2) mercado nuevo: jugadores libres al azar (menos probables los que valen más)
     const next = G.nextClose(Date.now(), k.hm), ends = next, inMk = new Set((market ? market.items : []).map(i => i.pid));
     const free = LIGA.players.filter(p => !own[p.id] && !inMk.has(p.id) && !prevL.has(p.id));
-    const pick = []; const pool = free.map(p => ({ p, w: Math.random() * (1 + Math.min(4, (pr.v[p.id] || 0) / 4e6)) })).sort((a, b) => b.w - a.w);
-    pool.slice(0, G.MARKET_SIZE).forEach(x => pick.push({ pid: x.p.id, seller: "LIGA", price: pr.v[x.p.id], ends }));
+    const pick = pickLiga(free, pr, G.MARKET_SIZE).map(p => ({ pid: p.id, seller: "LIGA", price: pr.v[p.id], ends }));
     market = { day: today, next, items: (market ? market.items : []).concat(pick) };
     await setJ(k("market"), market);
   } finally { await redis("DEL", k("lock:tick")); }
@@ -316,7 +319,7 @@ module.exports = async (req, res) => {
     const me = await whoami(req);
     if (!me) return send(401, { error: "Sesión caducada. Vuelve a entrar." });
     const admin = me.admin || norm(process.env.ADMIN_USER) === me.name;
-    const MIGV = "2026-11-23d";   // subir esto al añadir una migración nueva; así no se comprueban todas en cada carga
+    const MIGV = "2026-11-24a";   // subir esto al añadir una migración nueva; así no se comprueban todas en cada carga
     const [leagues, migV] = await Promise.all([allLeagues(), redis("GET", "mig:ver")]);
     if (migV !== MIGV) {
     if (await redis("SET", "mig:clref", "1", "NX")) {   // una vez: se devuelve lo pagado por subir cláusulas y se deshace la subida
@@ -474,6 +477,17 @@ module.exports = async (req, res) => {
         for (const u of (await redis("SMEMBERS", kk("users"))) || []) { const t = await getJ(kk("team:") + u); if (!t) continue; let ch = 0;
           for (const id of t.squad || []) { const sn = (t.since || {})[id]; if (sn && t.joined && Math.abs(sn - t.joined) < 60e3) { t.cl = t.cl || {}; t.cl[id] = Math.round((pr.v[id] || 0) * G.CLAUSE_START); ch = 1; } }
           if (ch) await setJ(kk("team:") + u, t); } }
+    }
+    if (await redis("SET", "mig:mk2411", "1", "NX")) {   // Aitor (2026-11-24): rehacer el mercado de LIGA de hoy con la nueva probabilidad (los caros salen menos)
+      const pr = await getPrices();
+      for (const code of Object.keys(leagues)) { const kk = keysOf(code), market = await getJ(kk("market")); if (!market) continue;
+        const old = market.items.filter(i => i.seller === "LIGA"); if (!old.length) continue;
+        const arr = (await redis("HGETALL", kk("owner"))) || [], own = {}; for (let i = 0; i < arr.length; i += 2) own[arr[i]] = arr[i + 1];
+        const inMk = new Set(market.items.map(i => i.pid)), ends = old[0].ends;
+        for (const it of old) await redis("DEL", kk("bids:") + it.pid);
+        const free = LIGA.players.filter(p => !own[p.id] && !inMk.has(p.id));
+        market.items = market.items.filter(i => i.seller !== "LIGA").concat(pickLiga(free, pr, G.MARKET_SIZE).map(p => ({ pid: p.id, seller: "LIGA", price: pr.v[p.id], ends })));
+        await setJ(kk("market"), market); }
     }
     await redis("SET", "mig:ver", MIGV); }
     let mineL = me.leagues || await myLeagues(me.name);
