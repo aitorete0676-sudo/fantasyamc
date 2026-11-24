@@ -591,6 +591,19 @@ module.exports = async (req, res) => {
       await log(k, "market", `${(buyer.name) || from} ha fichado a ${PL[pid].n} de ${mine.name || me.name} por ${o.amount.toLocaleString("es-ES")}€ (oferta aceptada)`);
       return send(200, { ok: true, amount: o.amount });
     }
+    if (a === "kick") {   // el admin de la liga (o el administrador) echa a un mánager: sus jugadores quedan libres
+      if (!(admin || (leagues[lg] && leagues[lg].admin === me.name))) return send(403, { error: "Solo el admin de la liga puede eliminar mánagers." });
+      const u = String(b.u || ""); if (!u || u === me.name) return send(400, { error: "No puedes eliminarte a ti mismo." });
+      if (!(await redis("SISMEMBER", k("users"), u))) return send(404, { error: "Ese mánager no está en la liga." });
+      const t = await getJ(k("team:") + u) || { squad: [] };
+      for (const id of t.squad || []) if ((await redis("HGET", k("owner"), id)) === u) await redis("HDEL", k("owner"), id);
+      const mk = await getJ(k("market")); if (mk) { const gone = mk.items.filter(i => i.seller === u); mk.items = mk.items.filter(i => i.seller !== u); for (const i of gone) await redis("DEL", k("bids:") + i.pid); for (const i of mk.items) await redis("HDEL", k("bids:") + i.pid, u); await setJ(k("market"), mk); }
+      const offs = await hgetall(k("offers")); for (const [f, o] of Object.entries(offs)) if (o.from === u || o.to === u) await redis("HDEL", k("offers"), f);
+      await redis("SREM", k("users"), u); await redis("DEL", k("team:") + u);
+      const uu = await getJ("user:" + u); if (uu) { uu.leagues = (uu.leagues || []).filter(c => c !== lg); await setJ("user:" + u, uu); }
+      await log(k, "info", `${t.name || u} ha sido eliminado de la liga por el admin.`);
+      return send(200, { ok: true });
+    }
     if (a === "presented") { mine.pres = mine.joined || 1; await setJ(myKey, mine); return send(200, { ok: true }); }   // ya ha visto la presentación de su plantilla
     if (a === "teamName") { mine.name = String(b.name || "").trim().slice(0, 28); await setJ(myKey, mine); return send(200, { ok: true }); }
     if (a === "daily") {

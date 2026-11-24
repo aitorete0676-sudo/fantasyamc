@@ -113,6 +113,7 @@ select.form{background:var(--card);color:var(--fg);border:0;padding:10px 12px;fo
 .boxes i.p{border-bottom-color:var(--ok)} .boxes i.z{border-bottom-color:#e0a030} .boxes i.n{border-bottom-color:var(--bad)} .boxes i.x{color:var(--muted)}
 .up{color:var(--ok)} .dn{color:var(--bad)}
 .trend{font-size:12px;font-weight:700}
+.kick{display:block;margin:22px auto 30px;padding:12px 22px;border:1px solid var(--bad);color:var(--bad);border-radius:10px;font-weight:600}
 .hm{position:fixed;z-index:60;left:12px;top:calc(env(safe-area-inset-top,0px) + 62px);background:#22242d;border-radius:14px;min-width:220px;box-shadow:0 10px 30px rgba(0,0,0,.5);overflow:hidden;animation:hmin .15s ease-out;transform-origin:top left}
 .hm button{display:flex;align-items:center;gap:12px;width:100%;padding:15px 18px;font-size:16px;text-align:left;border-bottom:1px solid #2f323c}.hm button:last-child{border-bottom:0}.hm button svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2}
 @keyframes hmin{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:none}}
@@ -985,6 +986,10 @@ function rivalView(sh) {
   if (sh.cl) { const ci = clauseInfo(sh.cl);
     over = `<div class="cfm" data-rclno="1"><div class="cfb"><h3>Pagar cláusula</h3><p>Vas a pagar <b>${eur(ci.c)} €</b> a <b>${esc(teamName(ci.owner))}</b> por <b>${esc(PL(sh.cl).n)}</b>. Tu saldo: ${eur(S.st.team.money)} €</p>
       <div class="cfr"><button data-rclno="1">Cancelar</button><button data-rclok="${sh.cl}">Pagar</button></div></div></div>`; }
+  const lgAdm = S.st.admin || ((S.st.leagues || []).find(l => l.code === S.st.lg) || {}).admin === S.st.me;
+  if (lgAdm && !me && tab === "pl") body += `<button class="kick" data-act="kickask">Eliminar de la liga</button>`;
+  if (sh.kick) over = `<div class="cfm"><div class="cfb"><h3>Eliminar mánager</h3><p>Vas a eliminar a <b>${esc(name)}</b> de la liga. Sus jugadores quedarán libres y perderá su equipo. No se puede deshacer.</p>
+      <div class="cfr"><button data-act="kickno">Cancelar</button><button data-act="kickok" style="color:var(--bad)">Eliminar</button></div></div></div>`;
   return `<div class="fx rv">${head}${body}</div>${over}`;
 }
 // Oferta de compra a otro mánager
@@ -1141,6 +1146,9 @@ document.addEventListener("click", async e => {
       if (a === "newlg") toast("Liga creada. Pasa el código " + r.code + " a tus amigos."); await refresh(); S.sheet = { t: "present" }; renderSheet(); }
     catch (e) { toast(e.message); } return; }
   if (a === "hmenu") return hmenu();
+  if (a === "kickask") { S.sheet.kick = 1; return renderSheet(); }
+  if (a === "kickno") { S.sheet.kick = 0; return renderSheet(); }
+  if (a === "kickok") { const u = S.sheet.u, nm = teamName(u); try { await api("kick", { u }); } catch (err) { S.sheet.kick = 0; renderSheet(); return toast(err.message); } S.sheet = null; toastOk(nm + " eliminado de la liga"); return refresh(); }
   if (a === "pushon") return pushOn(true);
   if (a === "pushask") { const x = document.querySelector(".avx"); if (x) x.remove(); return pushOn(true); }
   if (a === "logout") { api("logout").catch(() => {}); try { localStorage.removeItem(TK); } catch (e) {} return location.reload(); }
