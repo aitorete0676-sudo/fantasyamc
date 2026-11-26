@@ -101,10 +101,16 @@ async function priceTick() {
   try {
     const [dem, uns, J] = await Promise.all([hgetall("dem"), hgetall("uns"), allJornadas()]);
     const fresh = Object.values(J).filter(j => j.n >= G.FIRST_J && j.publicada && !pr.pub.includes(j.n));
+    pr.tr = pr.tr || {};   // tendencia de cada jugador: lo que le dejó su última jornada, se va apagando día a día
     LIGA.players.forEach(p => {
       let ch = Math.min(0.02, 0.005 * (+dem[p.id] || 0)) - Math.min(0.015, 0.005 * (+uns[p.id] || 0));   // Aitor 2026-11-24: cambios más suaves, como LaLiga Fantasy (los que más suben, 1-2 M al día)
-      fresh.forEach(j => { if (G.mins(j, p.id) > 0) ch += Math.max(-0.02, Math.min(0.03, (G.points(posOf(p.id), j, p.id) - 3) * 0.005)); else ch -= 0.005; });
-      const v0 = pr.v[p.id] || G.baseValue(0), dv = Math.max(-G.MAX_DAY, Math.min(G.MAX_DAY, v0 * ch)), v = Math.max(300000, Math.round((v0 + dv) / 1000) * 1000);   // nunca más de 2 M arriba o abajo en un día
+      let tr = (pr.tr[p.id] || 0) * 0.7;
+      fresh.forEach(j => { tr += G.mins(j, p.id) > 0 ? Math.max(-0.02, Math.min(0.03, (G.points(posOf(p.id), j, p.id) - 3) * 0.005)) : -0.005; });
+      pr.tr[p.id] = Math.abs(tr) < 0.0005 ? 0 : tr;
+      ch += tr + (Math.random() - 0.6) * 0.008;   // Aitor 2026-11-26: todos suben o bajan cada día, aunque sea poco. Como LaLiga Fantasy: ~60 % baja un poco, ~40 % sube; los grandes cambios vienen de pujas y jornadas
+      const v0 = pr.v[p.id] || G.baseValue(0), dv = Math.max(-G.MAX_DAY, Math.min(G.MAX_DAY, v0 * ch));
+      let v = Math.max(300000, Math.round((v0 + dv) / 1000) * 1000);   // nunca más de 2 M arriba o abajo en un día
+      if (v === v0) v = v0 + (ch > 0 || v0 <= 300000 ? 1000 : -1000);   // nunca se queda igual
       pr.prev[p.id] = v0; pr.v[p.id] = v; pr.h[p.id] = (pr.h[p.id] || []).concat(v).slice(-30);
     });
     fresh.forEach(j => pr.pub.push(j.n)); pr.day = today; await setJ("prices", pr);
